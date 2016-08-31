@@ -1734,6 +1734,8 @@ if ($builder eq "unified") {
         my %renames = ();
         my %sharednames = ();
         my %generate = ();
+        my %htmldocs = ();
+        my %mandocs = ();
 
         # We want to detect configdata.pm in the source tree, so we
         # don't use it if the build tree is different.
@@ -1867,6 +1869,12 @@ if ($builder eq "unified") {
                          if !@skip || $skip[$#skip] > 0 },
             qr/^\s*SHARED_NAME\[((?:\\.|[^\\\]])+)\]\s*=\s*(.*)\s*$/
             => sub { push @{$sharednames{$1}}, tokenize($2)
+                         if !@skip || $skip[$#skip] > 0 },
+            qr/^\s*HTMLDOCS\[((?:\\.|[^\\\]])+)\]\s*=\s*(.*)\s*$/
+            => sub { push @{$htmldocs{$1}}, tokenize($2)
+                         if !@skip || $skip[$#skip] > 0 },
+            qr/^\s*MANDOCS\[((?:\\.|[^\\\]])+)\]\s*=\s*(.*)\s*$/
+            => sub { push @{$mandocs{$1}}, tokenize($2)
                          if !@skip || $skip[$#skip] > 0 },
             qr/^\s*BEGINRAW\[((?:\\.|[^\\\]])+)\]\s*$/
             => sub {
@@ -2209,6 +2217,20 @@ EOF
                 $unified_info{defines}->{$ddest}->{$1} = $2;
             }
         }
+
+        foreach my $section (keys %htmldocs) {
+            foreach (@{$htmldocs{$section}}) {
+                my $htmldocs = cleanfile($buildd, $_, $blddir);
+                $unified_info{htmldocs}->{$section}->{$htmldocs} = 1;
+            }
+        }
+
+        foreach my $section (keys %mandocs) {
+            foreach (@{$mandocs{$section}}) {
+                my $mandocs = cleanfile($buildd, $_, $blddir);
+                $unified_info{mandocs}->{$section}->{$mandocs} = 1;
+            }
+        }
     }
 
     my $ordinals_text = join(', ', sort keys %ordinals);
@@ -2337,11 +2359,13 @@ EOF
 
     ### Make unified_info a bit more efficient
     # One level structures
-    foreach (("programs", "libraries", "engines", "scripts", "extra", "overrides")) {
+    foreach (("programs", "libraries", "engines", "scripts", "extra",
+              "overrides")) {
         $unified_info{$_} = [ sort keys %{$unified_info{$_}} ];
     }
     # Two level structures
-    foreach my $l1 (("install", "sources", "shared_sources", "ldadd", "depends")) {
+    foreach my $l1 (("install", "sources", "shared_sources", "ldadd", "depends",
+                     "htmldocs", "mandocs")) {
         foreach my $l2 (sort keys %{$unified_info{$l1}}) {
             my @items =
                 sort
