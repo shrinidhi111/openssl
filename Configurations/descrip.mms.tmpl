@@ -143,6 +143,10 @@ INSTALL_PROGRAMS={- join(", ", map { "-\n\t".$_.".EXE" } @{$unified_info{install
 BIN_SCRIPTS=[.tools]c_rehash.pl
 MISC_SCRIPTS=[.apps]CA.pl, [.apps]tsget.pl
 {- output_on() if $disabled{apps}; "" -}
+HTMLDOCS1={- join(", ", map { "-\n\t".$_ } @{$unified_info{htmldocs}->{man1}}) -}
+HTMLDOCS3={- join(", ", map { "-\n\t".$_ } @{$unified_info{htmldocs}->{man3}}) -}
+HTMLDOCS5={- join(", ", map { "-\n\t".$_ } @{$unified_info{htmldocs}->{man5}}) -}
+HTMLDOCS7={- join(", ", map { "-\n\t".$_ } @{$unified_info{htmldocs}->{man7}}) -}
 
 APPS_OPENSSL={- use File::Spec::Functions;
                 catfile("apps","openssl") -}
@@ -402,7 +406,7 @@ NODEBUG=@
 
 # The main targets ###################################################
 
-{- dependmagic('all'); -} : build_libs_nodep, build_engines_nodep, build_programs_nodep
+{- dependmagic('build_sw'); -} : build_libs_nodep, build_engines_nodep, build_programs_nodep
 {- dependmagic('build_libs'); -} : build_libs_nodep
 {- dependmagic('build_engines'); -} : build_engines_nodep
 {- dependmagic('build_programs'); -} : build_programs_nodep
@@ -412,17 +416,22 @@ build_libs_nodep : $(LIBS), $(SHLIBS)
 build_engines_nodep : $(ENGINES)
 build_programs_nodep : $(PROGRAMS), $(SCRIPTS)
 
+build_docs: build_html_docs
+build_html_docs: $(HTMLDOCS1) $(HTMLDOCS3) $(HTMLDOCS5) $(HTMLDOCS7)
+
 # Kept around for backward compatibility
 build_apps build_tests : build_programs
 
 # Convenience target to prebuild all generated files, not just the mandatory
 # ones
-build_all_generated : $(GENERATED_MANDATORY) $(GENERATED)
+build_all_generated : $(GENERATED_MANDATORY) $(GENERATED) build_docs
 	@ ! {- output_off() if $disabled{makedepend}; "" -}
 	@ WRITE SYS$OUTPUT "Warning: consider configuring with no-makedepend, because if"
 	@ WRITE SYS$OUTPUT "         target system doesn't have $(PERL),"
 	@ WRITE SYS$OUTPUT "         then make will fail..."
 	@ ! {- output_on() if $disabled{makedepend}; "" -}
+
+all : build_sw build_docs
 
 test : tests
 {- dependmagic('tests'); -} : build_programs_nodep, build_engines_nodep
@@ -454,7 +463,9 @@ list-tests :
         @ WRITE SYS$OUTPUT "Tests are not supported with your chosen Configure options"
         @ ! {- output_on() if !$disabled{tests}; "" -}
 
-install : install_sw install_ssldirs install_docs
+install : install_sw install_ssldirs install_docs install_final
+
+install_final :
         @ WRITE SYS$OUTPUT ""
         @ WRITE SYS$OUTPUT "######################################################################"
         @ WRITE SYS$OUTPUT ""
@@ -491,6 +502,10 @@ libclean :
         {- join("\n\t", map { "- DELETE $_.EXE;*,$_.MAP;*" } @shlibs) || "@ !" -}
 
 clean : libclean
+        {- join("\n\t", map { "- DELETE $_;*" } @{$unified_info{htmldocs}->{man1}}) || "@ !" -}
+        {- join("\n\t", map { "- DELETE $_;*" } @{$unified_info{htmldocs}->{man3}}) || "@ !" -}
+        {- join("\n\t", map { "- DELETE $_;*" } @{$unified_info{htmldocs}->{man5}}) || "@ !" -}
+        {- join("\n\t", map { "- DELETE $_;*" } @{$unified_info{htmldocs}->{man7}}) || "@ !" -}
         {- join("\n\t", map { "- DELETE $_.EXE;*,$_.OPT;*" } @{$unified_info{programs}}) || "@ !" -}
         {- join("\n\t", map { "- DELETE $_.EXE;*,$_.OPT;*" } @{$unified_info{engines}}) || "@ !" -}
         {- join("\n\t", map { "- DELETE $_;*" } @{$unified_info{scripts}}) || "@ !" -}
@@ -654,11 +669,21 @@ vmsconfig.pm : configdata.pm
         WRITE CONFIG "1;"
         CLOSE CONFIG
 
-install_html_docs : check_INSTALLTOP
-        sourcedir = F$PARSE("{- $sourcedir -}A.;","[]") - "]A.;" + ".DOC]"
-        $(PERL) {- sourcefile("util", "process_docs.pl") -} -
-                --sourcedir='sourcedir' --destdir=ossl_installroot:[HTML] -
-                --type=html
+install_html_docs : check_INSTALLTOP build_html_docs
+        @ WRITE SYS$OUTPUT "*** Installing HTML docs"
+        - CREATE/DIR ossl_installroot:[HTML.MAN1]
+        - CREATE/DIR ossl_installroot:[HTML.MAN3]
+        - CREATE/DIR ossl_installroot:[HTML.MAN5]
+        - CREATE/DIR ossl_installroot:[HTML.MAN7]
+        {- join("\n        ",
+                ( map { "COPY/PROT=W:RE $_ ossl_installroot:[HTML.MAN1]" }
+                  @{$unified_info{htmldocs}->{man1}} ),
+                ( map { "COPY/PROT=W:RE $_ ossl_installroot:[HTML.MAN3]" }
+                  @{$unified_info{htmldocs}->{man3}} ),
+                ( map { "COPY/PROT=W:RE $_ ossl_installroot:[HTML.MAN5]" }
+                  @{$unified_info{htmldocs}->{man5}} ),
+                ( map { "COPY/PROT=W:RE $_ ossl_installroot:[HTML.MAN7]" }
+                  @{$unified_info{htmldocs}->{man7}} )) -}
 
 check_INSTALLTOP :
         @ IF "$(INSTALLTOP)" .EQS. "" THEN -
@@ -750,7 +775,17 @@ reconfigure reconf :
       my $generator_incs = join("", map { ' "-I'.$_.'"' } @{$args{generator_incs}});
       my $deps = join(", -\n\t\t", @{$args{generator_deps}}, @{$args{deps}});
 
-      if ($args{src} =~ /\.ld$/) {
+      if ($args{src} =~ /\.html$/) {
+	  my $title = basename($args{src}, ".html");
+	  return <<"EOF";
+$args{src}: $args{generator}->[0]
+	pipe pod2html "--podroot=\$(SRCDIR)/doc" --htmldir=.. -
+		       --podpath=man1:man3:man5:man7 "--infile=\$<" -
+		      "--title=$title" -
+	| \$(PERL) -pe "s|href=""http://man\\.he\\.net/(man\d/[^""]+)(?:\\.html)?""|href=""../\$1.html|g;" -
+	> \$\@
+EOF
+      } elsif ($args{src} =~ /\.ld$/) {
           (my $target = $args{src}) =~ s/\.ld$/.OPT/;
           my $mkdef = sourcefile('util', 'mkdef.pl');
           my $ord_ver = $args{intent} eq 'lib' ? ' --version $(VERSION)' : '';
