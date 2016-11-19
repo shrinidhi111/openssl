@@ -358,6 +358,11 @@ IF[{- !$disabled{tests} -}]
     SOURCE[tls13encryptiontest]=tls13encryptiontest.c testutil.c test_main.c
     INCLUDE[tls13encryptiontest]=.. ../include
     DEPEND[tls13encryptiontest]=../libcrypto ../libssl.a
+
+    PROGRAMS_NO_INST=uri_internal_test
+    SOURCE[uri_internal_test]=uri_internal_test.c
+    INCLUDE[uri_internal_test]=.. ../include
+    DEPEND[uri_internal_test]=../libcrypto.a
   ENDIF
 
   IF[{- !$disabled{mdc2} -}]
