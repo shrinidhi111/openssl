@@ -336,6 +336,11 @@ IF[{- !$disabled{tests} -}]
     SOURCE[x509_internal_test]=x509_internal_test.c testutil.c test_main.c
     INCLUDE[x509_internal_test]=.. ../include
     DEPEND[x509_internal_test]=../libcrypto.a
+
+    PROGRAMS_NO_INST=uri_internal_test
+    SOURCE[uri_internal_test]=uri_internal_test.c
+    INCLUDE[uri_internal_test]=../include
+    DEPEND[uri_internal_test]=../libcrypto.a
   ENDIF
 
   IF[{- !$disabled{mdc2} -}]

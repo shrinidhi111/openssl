@@ -1,0 +1,14 @@
+uri     = http://user@f.q.d.n:8080/foo/bar/cookie.crt?n=2#foo
+scheme  = http
+authority = user@f.q.d.n:8080
+path    = /foo/bar/cookie.crt
+query   = n=2
+fragment = foo
+
+uri     = file:foo.pem?n=1
+scheme  = file
+path    = foo.pem
+query   = n=1
+
+uri     = bar.pem
+path    = bar.pem
