@@ -302,34 +302,36 @@ static int run_tests(STACK_OF(TEST_DATA) *test_datas)
             if (!rv) {
                 errcount++;
                 fprintf(stderr, "Test %d got unexpected result:\n", testnum);
-                fprintf(stderr, "  uri       = %s\n", test_data->uri);
-                fprintf(stderr, "  scheme    = %s (expected %s)\n", scheme,
+                fprintf(stderr, "  %s    = '%s'\n",
+                        test_data->good ? "uri   " : "baduri", test_data->uri);
+                fprintf(stderr, "  scheme    = '%s' (expected '%s')\n", scheme,
                         test_data->expected.scheme);
-                fprintf(stderr, "  authority = %s (expected %s)\n", authority,
+                fprintf(stderr, "  authority = '%s' (expected '%s')\n", authority,
                         test_data->expected.authority);
-                fprintf(stderr, "  path      = %s (expected %s)\n", path,
+                fprintf(stderr, "  path      = '%s' (expected '%s')\n", path,
                         test_data->expected.path);
-                fprintf(stderr, "  query     = %s (expected %s)\n", query,
+                fprintf(stderr, "  query     = '%s' (expected '%s')\n", query,
                         test_data->expected.query);
-                fprintf(stderr, "  fragment  = %s (expected %s)\n", fragment,
+                fprintf(stderr, "  fragment  = '%s' (expected '%s')\n", fragment,
                         test_data->expected.fragment);
             } else {
                 fprintf(stderr, "Test %d OK\n", testnum);
-                fprintf(stderr, "  uri       = %s\n", test_data->uri);
+                fprintf(stderr, "  %s    = '%s'\n",
+                        test_data->good ? "uri   " : "baduri", test_data->uri);
                 if (scheme || test_data->expected.scheme)
-                    fprintf(stderr, "  scheme    = %s (expected %s)\n", scheme,
+                    fprintf(stderr, "  scheme    = '%s' (expected '%s')\n", scheme,
                             test_data->expected.scheme);
                 if (authority || test_data->expected.authority)
-                    fprintf(stderr, "  authority = %s (expected %s)\n",
+                    fprintf(stderr, "  authority = '%s' (expected '%s')\n",
                             authority, test_data->expected.authority);
                 if (path || test_data->expected.path)
-                    fprintf(stderr, "  path      = %s (expected %s)\n", path,
+                    fprintf(stderr, "  path      = '%s' (expected '%s')\n", path,
                             test_data->expected.path);
                 if (query || test_data->expected.query)
-                    fprintf(stderr, "  query     = %s (expected %s)\n", query,
+                    fprintf(stderr, "  query     = '%s' (expected '%s')\n", query,
                             test_data->expected.query);
                 if (fragment || test_data->expected.fragment)
-                    fprintf(stderr, "  fragment  = %s (expected %s)\n",
+                    fprintf(stderr, "  fragment  = '%s' (expected '%s')\n",
                             fragment, test_data->expected.fragment);
             }
         }
