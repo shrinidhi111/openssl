@@ -161,32 +161,117 @@ static int span_host(const char *p, size_t *off)
             || !span_chars(p, &tmp_off, CHARTYPE_unreserved|CHARTYPE_sub_delims,
                           ":")) {
             tmp_off = tmp_off2;
+
             /* No IPvFuture, check for IPv6address */
-            /* We're not going totally crazy in our controls */
-            if (!span_chars(p, &tmp_off, CHARTYPE_HEXDIG, ":"))
-                tmp_off = tmp_off2;
+            {
+                int dblcolon = 0;
+                int maxcolons = 7;
+
+                /* check for starting :: */
+                if (p[tmp_off] == ':' && p[tmp_off + 1] == ':') {
+                    dblcolon++;
+                    tmp_off += 2;
+                    maxcolons--;
+                }
+
+                /*
+                 * check for HEXDIG strings followed by : and possibly ONE ::
+                 * if we haven't already had one.
+                 * We stop after the last colon found
+                 */
+                {
+                    size_t laststart = 0;
+
+                    while ((laststart = tmp_off, 1)
+                           && maxcolons > 0
+                           && span_chars(p, &tmp_off, CHARTYPE_HEXDIG, "")
+                           && p[tmp_off] == ':') {
+                        if (p[++tmp_off] == ':') {
+                            tmp_off++;
+                            if (++dblcolon > 1)
+                                break;
+                            maxcolons -= 2;
+                        } else
+                            maxcolons--;
+                    }
+                    tmp_off = laststart;
+                }
+                /* If there's more then one ::, all is lost */
+                /*
+                 * If there was no :: and there wasn't exactly 7 HEXDIG series
+                 * followed by a colon, all is lost as well
+                 */
+                if (dblcolon > 1 || (dblcolon == 0 && maxcolons > 0))
+                    tmp_off = tmp_off2;
+                /*
+                 * Otherwise, we might end this with an IPv4 address,
+                 * maxcolumns allowing, and we might also end this with a last
+                 * serie of HEXDIG.  We try IPv4 first.
+                 */
+                else {
+                    size_t v4_end = tmp_off;
+
+                    /*
+                     * IPv4 addresses take up 32 bits, so it can't be here if
+                     * we maxed out on the colons
+                     */
+                    if (maxcolons > 0
+                        && ((p[v4_end] == '0' && (v4_end++, 1))
+                            || span_chars(p, &v4_end, CHARTYPE_DIGIT, ""))
+                        && p[v4_end++] == '.'
+                        && ((p[v4_end] == '0' && (v4_end++, 1))
+                            || span_chars(p, &v4_end, CHARTYPE_DIGIT, ""))
+                        && p[v4_end++] == '.'
+                        && ((p[v4_end] == '0' && (v4_end++, 1))
+                            || span_chars(p, &v4_end, CHARTYPE_DIGIT, ""))
+                        && p[v4_end++] == '.'
+                        && ((p[v4_end] == '0' && (v4_end++, 1))
+                            || span_chars(p, &v4_end, CHARTYPE_DIGIT, ""))
+                        && v4_end - tmp_off < 16)
+                        tmp_off = v4_end;
+                    /*
+                     * If there was no IPv4 address, we check for an ending
+                     * serie of HEXDIG.  If there is no such thing, there MUST
+                     * be an ending ::
+                     */
+                    else if (!span_chars(p, &tmp_off, CHARTYPE_HEXDIG, "")
+                             && (dblcolon == 0
+                                 || p[tmp_off - 1] != ':'
+                                 || p[tmp_off - 2] != ':'))
+                        /* None found */
+                        tmp_off = tmp_off2;
+                }
+
+            }
         }
+
         if (tmp_off != tmp_off2 && p[tmp_off++] == ']') {
             *off = tmp_off;
             return 1;
         }
     } else {
-        /* Check for IPv4address */
-        /* We're not going totally crazy in our controls */
-        if (span_chars(p, &tmp_off, CHARTYPE_DIGIT, "")
-            && p[tmp_off++] == '.'
-            && span_chars(p, &tmp_off, CHARTYPE_DIGIT, "")
-            && p[tmp_off++] == '.'
-            && span_chars(p, &tmp_off, CHARTYPE_DIGIT, "")
-            && p[tmp_off++] == '.'
-            && span_chars(p, &tmp_off, CHARTYPE_DIGIT, "")
-            && tmp_off - *off < 16) {
-            *off = tmp_off;
-            return 1;
-        } else {
-            (void)span_pchars2(p, off, NULL);
-            return 1;
-        }
+        size_t tmp_off2 = tmp_off;
+
+        /* Check for IPv4address or reg-name.  The longest wins */
+        if (!(((p[tmp_off] == '0' && (tmp_off++, 1))
+               || span_chars(p, &tmp_off, CHARTYPE_DIGIT, ""))
+              && p[tmp_off++] == '.'
+              && ((p[tmp_off] == '0' && (tmp_off++, 1))
+                  || span_chars(p, &tmp_off, CHARTYPE_DIGIT, ""))
+              && p[tmp_off++] == '.'
+              && ((p[tmp_off] == '0' && (tmp_off++, 1))
+                  || span_chars(p, &tmp_off, CHARTYPE_DIGIT, ""))
+              && p[tmp_off++] == '.'
+              && ((p[tmp_off] == '0' && (tmp_off++, 1))
+                  || span_chars(p, &tmp_off, CHARTYPE_DIGIT, ""))
+              && tmp_off - tmp_off < 16))
+            tmp_off = *off;
+
+        (void)span_pchars2(p, &tmp_off2, NULL);
+
+        *off = tmp_off2 > tmp_off ? tmp_off2 : tmp_off;
+
+        return 1;
     }
     return 0;
 }
