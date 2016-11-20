@@ -62,17 +62,16 @@ static int parse_key_value(const char *line, char **key, char **value)
         line++;
 
     if (line[0] != '=') {
-        OPENSSL_free(key);
+        OPENSSL_free(*key);
         return 0;
     }
     line++;
     while(*line != '\n' && isspace(*line))
         line++;
 
-    off = strlen(line) - 1;
-    while(isspace(line[off]))
+    off = strlen(line);
+    while(off > 0 && isspace(line[off - 1]))
         off--;
-    off++;
 
     if ((*value = OPENSSL_strndup(line, off)) == NULL) {
         OPENSSL_free(*key);
@@ -280,7 +279,7 @@ static int run_tests(STACK_OF(TEST_DATA) *test_datas)
     int errcount = 0;
 
     while (sk_TEST_DATA_num(test_datas) > 0) {
-        TEST_DATA *test_data = sk_TEST_DATA_pop(test_datas);
+        TEST_DATA *test_data = sk_TEST_DATA_shift(test_datas);
         char *scheme = NULL, *authority = NULL, *path = NULL, *query = NULL,
             *fragment = NULL;
         int rv = OPENSSL_decode_uri(test_data->uri, &scheme, &authority, &path,
@@ -300,7 +299,7 @@ static int run_tests(STACK_OF(TEST_DATA) *test_datas)
                   && cmp(path, test_data->expected.path) == 0
                   && cmp(query, test_data->expected.query) == 0
                   && cmp(fragment, test_data->expected.fragment) == 0);
-            if ((test_data->good && !rv) || (!test_data->good && rv)) {
+            if (!rv) {
                 errcount++;
                 fprintf(stderr, "Test %d got unexpected result:\n", testnum);
                 fprintf(stderr, "  uri       = %s\n", test_data->uri);
@@ -334,6 +333,7 @@ static int run_tests(STACK_OF(TEST_DATA) *test_datas)
                             fragment, test_data->expected.fragment);
             }
         }
+        ERR_clear_error();
     }
 
     return errcount;
