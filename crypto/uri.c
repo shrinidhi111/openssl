@@ -139,10 +139,12 @@ static int extract_scheme(char **scheme, const char **pp)
  */
 static int span_userinfo(const char *p, size_t *off)
 {
-    (void)span_pchars2(p, off, ":");
-    if (p[*off] != '@')
+    size_t tmp_off = *off;
+
+    (void)span_pchars2(p, &tmp_off, ":");
+    if (p[tmp_off] != '@')
         return 0;
-    (*off)++;
+    *off = tmp_off + 1;
     return 1;
 }
 static int span_host(const char *p, size_t *off)
