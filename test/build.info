@@ -339,7 +339,7 @@ IF[{- !$disabled{tests} -}]
 
     PROGRAMS_NO_INST=uri_internal_test
     SOURCE[uri_internal_test]=uri_internal_test.c
-    INCLUDE[uri_internal_test]=../include
+    INCLUDE[uri_internal_test]=.. ../include
     DEPEND[uri_internal_test]=../libcrypto.a
   ENDIF
 

@@ -18,6 +18,8 @@
 
 #include "internal/uri.h"
 
+#include "e_os.h"
+
 struct test_data_st {
     int good;
     char *uri;
