@@ -336,6 +336,11 @@ static int run_tests(STACK_OF(TEST_DATA) *test_datas)
             }
         }
         ERR_clear_error();
+        OPENSSL_free(scheme);
+        OPENSSL_free(authority);
+        OPENSSL_free(path);
+        OPENSSL_free(query);
+        OPENSSL_free(fragment);
     }
 
     return errcount;
