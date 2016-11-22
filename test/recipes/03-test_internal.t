@@ -20,7 +20,7 @@ my @known_internal_tests =
     ["modes_internal_test"] => !$shared_windows,
     ["asn1_internal_test"] => !$shared_windows,
     ["x509_internal_test"] => !$shared_windows,
-    ["uri_internal_test", srctop_file("test", "uritests.txt")] => 1 );
+    ["uri_internal_test", srctop_file("test", "uritests.txt")] => !$shared_windows );
 
 plan tests => scalar @known_internal_tests / 2;
 
