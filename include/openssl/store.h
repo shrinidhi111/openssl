@@ -168,6 +168,9 @@ int ERR_load_STORE_strings(void);
 /* Error codes for the STORE functions. */
 
 /* Function codes. */
+# define STORE_F_FILE_GET_PASS                            109
+# define STORE_F_FILE_LOAD                                110
+# define STORE_F_FILE_OPEN                                111
 # define STORE_F_STORE_INFO_NEW_CERT                      100
 # define STORE_F_STORE_INFO_NEW_CRL                       101
 # define STORE_F_STORE_INFO_NEW_NAME                      102
@@ -177,9 +180,16 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_STORE_LOADER_NEW                         106
 # define STORE_F_STORE_OPEN_INT                           107
 # define STORE_F_STORE_UNREGISTER_LOADER_INT              108
+# define STORE_F_TRY_DECODE_PARAMS                        112
 
 /* Reason codes. */
+# define STORE_R_AMBIGUOUS_CONTENT_TYPE                   101
+# define STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED      102
 # define STORE_R_UNREGISTERED_SCHEME                      100
+# define STORE_R_UNSUPPORTED_CONTENT_TYPE                 103
+# define STORE_R_URI_AUTHORITY_UNSUPPORED                 104
+# define STORE_R_URI_FRAGMENT_UNSUPPORED                  105
+# define STORE_R_URI_QUERY_UNSUPPORED                     106
 
 # ifdef  __cplusplus
 }
