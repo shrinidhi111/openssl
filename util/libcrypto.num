@@ -4245,3 +4245,9 @@ STORE_INFO_get0_CRL                     4195	1_1_1	EXIST::FUNCTION:
 STORE_INFO_type_string                  4196	1_1_1	EXIST::FUNCTION:
 STORE_load                              4197	1_1_1	EXIST::FUNCTION:
 STORE_unregister_loader                 4198	1_1_1	EXIST::FUNCTION:
+STORE_FILE_HANDLER_free                 4199	1_1_1	EXIST::FUNCTION:
+STORE_FILE_HANDLER_set_try_decode       4200	1_1_1	EXIST::FUNCTION:
+STORE_FILE_unregister_handler           4201	1_1_1	EXIST::FUNCTION:
+STORE_FILE_register_handler             4202	1_1_1	EXIST::FUNCTION:
+STORE_FILE_HANDLER_new                  4203	1_1_1	EXIST::FUNCTION:
+STORE_FILE_HANDLER_set0_name            4204	1_1_1	EXIST::FUNCTION:

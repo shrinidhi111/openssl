@@ -13,6 +13,7 @@
 #include <openssl/lhash.h>
 #include <openssl/x509.h>
 #include <openssl/store.h>
+#include <openssl/store_file.h>
 
 struct store_info_st {
     int type;
@@ -41,3 +42,14 @@ DEFINE_LHASH_OF(STORE_LOADER);
 
 const STORE_LOADER *store_get0_loader_int(const char *scheme);
 void destroy_loaders_int(void);
+
+/* Specific to the file loader */
+struct store_file_handler_st {
+    const char *name;
+    STORE_FILE_try_decode_fn try_decode;
+};
+DEFINE_LHASH_OF(STORE_FILE_HANDLER);
+
+void destroy_file_handlers_int(void);
+int store_file_loader_init(void);
+int store_file_handlers_init(void);
