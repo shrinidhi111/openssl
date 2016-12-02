@@ -272,6 +272,10 @@ static STORE_FILE_HANDLER *store_file_unregister_handler_int(const char *name)
         return 0;
     }
 
+    if (lh_STORE_FILE_HANDLER_num_items(file_handlers) == 0) {
+        lh_STORE_FILE_HANDLER_free(file_handlers);
+    }
+
     return handler;
 }
 STORE_FILE_HANDLER *STORE_FILE_unregister_handler(const char *name)
@@ -405,14 +409,15 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
                              void *pw_callback_data)
 {
     char *name = NULL;           /* PEM record name */
+    char *header = NULL;         /* PEM record header */
     unsigned char *data = NULL;  /* DER encoded data */
     long len = 0;                /* DER encoded data length */
     STORE_INFO *result = NULL;
     int i = 0;
+    BUF_MEM *mem = NULL;
     DOALL_DATA doall_data;
 
     if (ctx->is_pem) {
-        char *header = NULL;
 
         i = PEM_read_bio(ctx->file, &name, &header, &data, &len);
         if (i <= 0)
@@ -424,12 +429,10 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
             if (!PEM_get_EVP_CIPHER_INFO(header, &cipher)
                 || !PEM_do_header(&cipher, data, &len, pw_callback,
                                   pw_callback_data)) {
-                OPENSSL_free(header);
                 goto err;
             }
         }
     } else {
-        BUF_MEM *mem = NULL;
         PKCS12 *pkcs12 =NULL;
 
         if ((len = asn1_d2i_read_bio(ctx->file, &mem)) < 0)
@@ -437,7 +440,6 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
 
         data = (unsigned char *)mem->data;
         len = (long)mem->length;
-        OPENSSL_free(mem);
 
 #if 0                          /* PKCS12 not yet ready */
         /* Try and see if we loaded a PKCS12 */
@@ -465,8 +467,13 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
 
     result = doall_data.result;
  err:
+    OPENSSL_free(doall_data.functions);
     OPENSSL_free(name);
-    OPENSSL_free(data);
+                OPENSSL_free(header);
+    if (mem == NULL)
+        OPENSSL_free(data);
+    else
+        BUF_MEM_free(mem);
     return result;
 }
 
@@ -478,6 +485,7 @@ static int file_eof(STORE_LOADER_CTX *ctx)
 static int file_close(STORE_LOADER_CTX *ctx)
 {
     BIO_free_all(ctx->file);
+    OPENSSL_free(ctx);
     return 1;
 }
 
