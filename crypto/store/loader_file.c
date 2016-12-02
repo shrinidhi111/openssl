@@ -433,7 +433,9 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
             }
         }
     } else {
+#if 0                          /* PKCS12 not yet ready */
         PKCS12 *pkcs12 =NULL;
+#endif
 
         if ((len = asn1_d2i_read_bio(ctx->file, &mem)) < 0)
             goto err;
