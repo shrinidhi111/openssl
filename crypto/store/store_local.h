@@ -31,13 +31,13 @@ int store_register_loader_int(STORE_LOADER *loader);
 STORE_LOADER *store_unregister_loader_int(const char *scheme);
 
 /* loader stuff */
-typedef struct store_loader_st {
+struct store_loader_st {
     const char *scheme;
     STORE_open_fn open;
     STORE_load_fn load;
     STORE_eof_fn eof;
     STORE_close_fn close;
-} STORE_LOADER;
+};
 DEFINE_LHASH_OF(STORE_LOADER);
 
 const STORE_LOADER *store_get0_loader_int(const char *scheme);
