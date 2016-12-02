@@ -494,3 +494,51 @@ int store_file_loader_init(void)
 {
     return store_register_loader_int(&store_file_loader);
 }
+
+/******************************************************************************
+ *
+ *  STORE_FILE_HANDLER library
+ *
+ *****/
+
+STORE_FILE_HANDLER *STORE_FILE_HANDLER_new(void)
+{
+    STORE_FILE_HANDLER *handler = OPENSSL_malloc(sizeof(*handler));
+
+    if (handler == NULL)
+        STOREerr(STORE_F_STORE_FILE_HANDLER_NEW, ERR_R_MALLOC_FAILURE);
+
+    return handler;
+}
+
+int STORE_FILE_HANDLER_set0_name(STORE_FILE_HANDLER *handler, const char *name)
+{
+    if (name == NULL) {
+        STOREerr(STORE_F_STORE_FILE_HANDLER_SET0_NAME,
+                 ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+
+    handler->name = name;
+    return 1;
+}
+
+int STORE_FILE_HANDLER_set_try_decode(STORE_FILE_HANDLER *handler,
+                                      STORE_FILE_try_decode_fn try_decode)
+{
+    if (try_decode == NULL) {
+        STOREerr(STORE_F_STORE_FILE_HANDLER_SET_TRY_DECODE,
+                 ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+
+    handler->try_decode = try_decode;
+    return 1;
+}
+
+int STORE_FILE_HANDLER_free(STORE_FILE_HANDLER *handler)
+{
+    OPENSSL_free(handler);
+    return 1;
+}
+
