@@ -164,7 +164,28 @@ static STORE_FILE_HANDLER PKCS8PrivateKey_handler = {
     try_decode_PKCS8PrivateKey
 };
 
-/* TODO: Add corresponding public key handlers */
+static STORE_INFO *try_decode_PUBKEY(const char *pem_name,
+                                     const unsigned char *blob, size_t len,
+                                     pem_password_cb *pw_callback,
+                                     void *pw_callback_data)
+{
+    STORE_INFO *store_info = NULL;
+    EVP_PKEY *pkey = NULL;
+
+
+    if (pem_name != NULL && strcmp(pem_name, PEM_STRING_PUBLIC) != 0)
+        /* No match */
+        return NULL;
+
+    if ((pkey = d2i_PUBKEY(NULL, &blob, len)) != NULL)
+        store_info = STORE_INFO_new_PKEY(pkey);
+
+    return store_info;
+}
+static STORE_FILE_HANDLER PUBKEY_handler = {
+    "PUBKEY",
+    try_decode_PUBKEY
+};
 
 static STORE_INFO *try_decode_X509Certificate(const char *pem_name,
                                               const unsigned char *blob,
@@ -291,6 +312,7 @@ int store_file_handlers_init(void)
         && store_file_register_handler_int(&DSAPrivateKey_handler)
         && store_file_register_handler_int(&ECPrivateKey_handler)
         && store_file_register_handler_int(&PKCS8PrivateKey_handler)
+        && store_file_register_handler_int(&PUBKEY_handler)
         && store_file_register_handler_int(&X509Certificate_handler)
         && store_file_register_handler_int(&X509CRL_handler);
 }
@@ -301,6 +323,7 @@ void destroy_file_handlers_int(void)
     store_file_unregister_handler_int(DSAPrivateKey_handler.name);
     store_file_unregister_handler_int(ECPrivateKey_handler.name);
     store_file_unregister_handler_int(PKCS8PrivateKey_handler.name);
+    store_file_unregister_handler_int(PUBKEY_handler.name);
     store_file_unregister_handler_int(X509Certificate_handler.name);
     store_file_unregister_handler_int(X509CRL_handler.name);
 }
