@@ -177,6 +177,7 @@ int storeutl_main(int argc, char *argv[])
             }
         }
         items++;
+        STORE_INFO_free(info);
     }
     BIO_printf(out, "Total found: %d\n", items);
 
