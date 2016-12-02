@@ -116,7 +116,13 @@ int STORE_register_loader(STORE_LOADER *loader)
 
 const STORE_LOADER *store_get0_loader_int(const char *scheme)
 {
-    STORE_LOADER template = { (char *)scheme, NULL, NULL, NULL };
+    STORE_LOADER template;
+
+    template.scheme = scheme;
+    template.open = NULL;
+    template.load = NULL;
+    template.eof = NULL;
+    template.close = NULL;
 
     if (!store_init_once())
         return 0;
@@ -126,8 +132,14 @@ const STORE_LOADER *store_get0_loader_int(const char *scheme)
 
 STORE_LOADER *store_unregister_loader_int(const char *scheme)
 {
-    STORE_LOADER template = { (char *)scheme, NULL, NULL, NULL };
+    STORE_LOADER template;
     STORE_LOADER *loader = NULL;
+
+    template.scheme = scheme;
+    template.open = NULL;
+    template.load = NULL;
+    template.eof = NULL;
+    template.close = NULL;
 
     loader = lh_STORE_LOADER_delete(loader_register, &template);
 
