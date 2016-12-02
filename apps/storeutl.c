@@ -107,12 +107,16 @@ int storeutl_main(int argc, char *argv[])
         goto end;
     }
 
+    /* From here on, we count errors, and we'll return the count at the end */
+    ret = 0;
+
     while (!STORE_eof(store_ctx)) {
         STORE_INFO *info = STORE_load(store_ctx);
 
         if (info == NULL) {
             BIO_printf(bio_err, "%d: STORE_INFO is NULL!\n", items);
             ERR_print_errors(bio_err);
+            ret++;
         } else if (STORE_INFO_get_type(info) == STORE_INFO_NAME)
             BIO_printf(bio_out, "%d: %s: %s\n", items,
                        STORE_INFO_type_string(STORE_INFO_get_type(info)),
@@ -158,6 +162,7 @@ int storeutl_main(int argc, char *argv[])
                     default:
                         BIO_printf(bio_err, "Unknown key base id %d\n",
                                    EVP_PKEY_base_id(k));
+                        ret++;
                         break;
                     }
                 }
@@ -177,10 +182,10 @@ int storeutl_main(int argc, char *argv[])
 
     if (!STORE_close(store_ctx)) {
         ERR_print_errors(bio_err);
+        ret++;
         goto end;
     }
 
-    ret = 0;
  end:
     BIO_free_all(out);
     release_engine(e);

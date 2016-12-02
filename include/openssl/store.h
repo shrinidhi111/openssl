@@ -155,6 +155,9 @@ int ERR_load_STORE_strings(void);
 /* Function codes. */
 # define STORE_F_FILE_LOAD                                108
 # define STORE_F_FILE_OPEN                                109
+# define STORE_F_STORE_FILE_HANDLER_NEW                   112
+# define STORE_F_STORE_FILE_HANDLER_SET0_NAME             113
+# define STORE_F_STORE_FILE_HANDLER_SET_TRY_DECODE        114
 # define STORE_F_STORE_FILE_UNREGISTER_HANDLER_INT        110
 # define STORE_F_STORE_INFO_NEW_CERT                      100
 # define STORE_F_STORE_INFO_NEW_CRL                       101
