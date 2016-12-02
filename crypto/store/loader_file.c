@@ -281,8 +281,11 @@ int STORE_FILE_register_handler(STORE_FILE_HANDLER *handler)
 
 static STORE_FILE_HANDLER *store_file_unregister_handler_int(const char *name)
 {
-    STORE_FILE_HANDLER template = { (char *)name, NULL };
+    STORE_FILE_HANDLER template;
     STORE_FILE_HANDLER *handler = NULL;
+
+    template.name = name;
+    template.try_decode = NULL;
 
     handler = lh_STORE_FILE_HANDLER_delete(file_handlers, &template);
 
