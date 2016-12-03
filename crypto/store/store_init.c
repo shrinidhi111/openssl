@@ -7,6 +7,7 @@
  * https://www.openssl.org/source/license.html
  */
 
+#include <openssl/err.h>
 #include "store_local.h"
 
 static CRYPTO_ONCE store_init = CRYPTO_ONCE_STATIC_INIT;
