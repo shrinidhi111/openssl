@@ -139,7 +139,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else if (strcasecmp(key, "baduri") == 0)
@@ -153,7 +152,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else if (strcasecmp(key, "scheme") == 0)
@@ -171,7 +169,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else if (strcasecmp(key, "authority") == 0)
@@ -189,7 +186,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else if (strcasecmp(key, "path") == 0)
@@ -207,7 +203,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else if (strcasecmp(key, "query") == 0)
@@ -225,7 +220,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else if (strcasecmp(key, "fragment") == 0)
@@ -243,7 +237,6 @@ static TEST_DATA *read_test_data(FILE *f)
                 skip_stanza = 1;
                 free_test_data(test_data);
                 test_data = NULL;
-                OPENSSL_free(key);
                 OPENSSL_free(value);
             }
         else {
@@ -252,7 +245,9 @@ static TEST_DATA *read_test_data(FILE *f)
             skip_stanza = 1;
             free_test_data(test_data);
             test_data = NULL;
+            OPENSSL_free(value);
         }
+        OPENSSL_free(key);
     }
 
     return test_data;
@@ -358,6 +353,7 @@ int main(int argc, char *argv[])
 
     while (!feof(f) && (test_data = read_test_data(f)) != NULL) {
         errs += run_test(test_data);
+        free_test_data(test_data);
     }
 
     fclose(f);
