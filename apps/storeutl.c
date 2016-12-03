@@ -40,9 +40,7 @@ int storeutl_main(int argc, char *argv[])
     char *outfile = NULL, *passin = NULL, *passinarg = NULL;
     int outformat = FORMAT_PEM;
     BIO *out = NULL;
-#ifndef OPENSSL_NO_ENGINE
     ENGINE *e = NULL;
-#endif
     OPTION_CHOICE o;
     char *prog = opt_init(argc, argv, storeutl_options);
     PW_CB_DATA pw_cb_data;
@@ -71,11 +69,9 @@ int storeutl_main(int argc, char *argv[])
         case OPT_NOOUT:
             noout = ++num;
             break;
-#ifndef OPENSSL_NO_ENGINE
         case OPT_ENGINE:
             e = setup_engine(opt_arg(), 0);
             break;
-#endif
         }
     }
     argc = opt_num_rest();
