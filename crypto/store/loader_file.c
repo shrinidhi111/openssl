@@ -31,7 +31,7 @@
 
 static STORE_INFO *try_decode_RSAPrivateKey(const char *pem_name,
                                             const unsigned char *blob,
-                                            size_t len,
+                                            size_t len, void **pctx,
                                             pem_password_cb *pw_callback,
                                             void *pw_callback_data)
 {
@@ -58,7 +58,7 @@ static STORE_FILE_HANDLER RSAPrivateKey_handler = {
 
 static STORE_INFO *try_decode_DSAparams(const char *pem_name,
                                              const unsigned char *blob,
-                                             size_t len,
+                                             size_t len, void **pctx,
                                              pem_password_cb *pw_callback,
                                              void *pw_callback_data)
 {
@@ -83,7 +83,7 @@ static STORE_FILE_HANDLER DSAparams_handler = {
 
 static STORE_INFO *try_decode_DSAPrivateKey(const char *pem_name,
                                             const unsigned char *blob,
-                                            size_t len,
+                                            size_t len, void **pctx,
                                             pem_password_cb *pw_callback,
                                             void *pw_callback_data)
 {
@@ -110,7 +110,7 @@ static STORE_FILE_HANDLER DSAPrivateKey_handler = {
 
 static STORE_INFO *try_decode_ECPKParameters(const char *pem_name,
                                              const unsigned char *blob,
-                                             size_t len,
+                                             size_t len, void **pctx,
                                              pem_password_cb *pw_callback,
                                              void *pw_callback_data)
 {
@@ -135,7 +135,7 @@ static STORE_FILE_HANDLER ECPKParameters_handler = {
 
 static STORE_INFO *try_decode_ECPrivateKey(const char *pem_name,
                                             const unsigned char *blob,
-                                            size_t len,
+                                            size_t len, void **pctx,
                                             pem_password_cb *pw_callback,
                                             void *pw_callback_data)
 {
@@ -163,7 +163,7 @@ static STORE_FILE_HANDLER ECPrivateKey_handler = {
 
 static STORE_INFO *try_decode_PKCS8PrivateKey(const char *pem_name,
                                               const unsigned char *blob,
-                                              size_t len,
+                                              size_t len, void **pctx,
                                               pem_password_cb *pw_callback,
                                               void *pw_callback_data)
 {
@@ -218,7 +218,7 @@ static STORE_FILE_HANDLER PKCS8PrivateKey_handler = {
 
 static STORE_INFO *try_decode_PUBKEY(const char *pem_name,
                                      const unsigned char *blob, size_t len,
-                                     pem_password_cb *pw_callback,
+                                     void **pctx, pem_password_cb *pw_callback,
                                      void *pw_callback_data)
 {
     STORE_INFO *store_info = NULL;
@@ -241,7 +241,7 @@ static STORE_FILE_HANDLER PUBKEY_handler = {
 
 static STORE_INFO *try_decode_X509Certificate(const char *pem_name,
                                               const unsigned char *blob,
-                                              size_t len,
+                                              size_t len, void **pctx,
                                               pem_password_cb *pw_callback,
                                               void *pw_callback_data)
 {
@@ -268,7 +268,7 @@ static STORE_FILE_HANDLER X509Certificate_handler = {
 
 static STORE_INFO *try_decode_X509CRL(const char *pem_name,
                                       const unsigned char *blob,
-                                      size_t len,
+                                      size_t len, void **pctx,
                                       pem_password_cb *pw_callback,
                                       void *pw_callback_data)
 {
@@ -397,6 +397,13 @@ void destroy_file_handlers_int(void)
 struct store_loader_ctx_st {
     BIO *file;
     int is_pem;
+
+    /* The following are used when the handler is marked as repeatable */
+    STORE_FILE_HANDLER *last_handler;
+    void *last_handler_ctx;
+    unsigned char *last_data;
+    long last_data_len;
+    BUF_MEM *last_mem;
 };
 
 static STORE_LOADER_CTX *file_open(const char *authority, const char *path,
@@ -458,20 +465,25 @@ typedef struct doall_data {
     /* Accumulated result */
     STORE_INFO *result;
     int matchcount;
-
-    /* This exists for debugging purposes only */
-    STORE_FILE_try_decode_fn *functions;
+    STORE_FILE_HANDLER **handlers;
+    void *handler_ctx;
 } DOALL_DATA;
 static void do_all_file_handlers(STORE_FILE_HANDLER *handler,
                                  DOALL_DATA *arg)
 {
+    void *handler_ctx = NULL;
     STORE_INFO *tmp_result = handler->try_decode(arg->name, arg->data, arg->len,
+                                                 &handler_ctx,
                                                  arg->pw_callback,
                                                  arg->pw_callback_data);
 
     if (tmp_result != NULL) {
-        if (arg->functions)
-            arg->functions[arg->matchcount] = handler->try_decode;
+        if (arg->handlers)
+            arg->handlers[arg->matchcount] = handler;
+
+        if (arg->handler_ctx)
+            handler->destroy_ctx(&arg->handler_ctx);
+        arg->handler_ctx = handler_ctx;
 
         if (++arg->matchcount == 1) {
             arg->result = tmp_result;
@@ -480,6 +492,8 @@ static void do_all_file_handlers(STORE_FILE_HANDLER *handler,
             /* more than one match => ambiguous, kill any result */
             STORE_INFO_free(arg->result);
             STORE_INFO_free(tmp_result);
+            handler->destroy_ctx(&arg->handler_ctx);
+            arg->handler_ctx = NULL;
             arg->result = NULL;
         }
     }
@@ -497,7 +511,26 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
     STORE_INFO *result = NULL;
     int i = 0;
     BUF_MEM *mem = NULL;
-    DOALL_DATA doall_data;
+
+    if (ctx->last_handler != NULL) {
+        result = ctx->last_handler->try_decode(NULL, ctx->last_data,
+                                               ctx->last_data_len,
+                                               &ctx->last_handler_ctx,
+                                               pw_callback, pw_callback_data);
+
+        if (result != NULL)
+            return result;
+
+        ctx->last_handler->destroy_ctx(&ctx->last_handler_ctx);
+        ctx->last_handler_ctx = NULL;
+        ctx->last_handler = NULL;
+        if (ctx->last_mem == NULL)
+            OPENSSL_free(ctx->last_data);
+        else
+            BUF_MEM_free(ctx->last_mem);
+        ctx->last_data = NULL;
+        ctx->last_mem = NULL;
+    }
 
     if (ctx->is_pem) {
 
@@ -515,45 +548,53 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
             }
         }
     } else {
-#if 0                          /* PKCS12 not yet ready */
-        PKCS12 *pkcs12 =NULL;
-#endif
-
         if ((len = asn1_d2i_read_bio(ctx->file, &mem)) < 0)
             goto err;
 
         data = (unsigned char *)mem->data;
         len = (long)mem->length;
-
-#if 0                          /* PKCS12 not yet ready */
-        /* Try and see if we loaded a PKCS12 */
-        pkcs12 = d2i_PKCS12(NULL, &data, len);
-#endif
     }
 
-    doall_data.name = name;
-    doall_data.data = data;
-    doall_data.len = len;
-    doall_data.pw_callback = pw_callback;
-    doall_data.pw_callback_data = pw_callback_data;
-    doall_data.result = NULL;
-    doall_data.matchcount = 0;
-    doall_data.functions =
-        OPENSSL_zalloc(sizeof(*doall_data.functions)
-                       * lh_STORE_FILE_HANDLER_num_items(file_handlers));
+    {
+        DOALL_DATA doall_data;
 
-    lh_STORE_FILE_HANDLER_doall_DOALL_DATA(file_handlers, do_all_file_handlers,
-                                           &doall_data);
-    if (doall_data.matchcount > 1)
-        STOREerr(STORE_F_FILE_LOAD, STORE_R_AMBIGUOUS_CONTENT_TYPE);
-    if (doall_data.matchcount == 0)
-        STOREerr(STORE_F_FILE_LOAD, STORE_R_UNSUPPORTED_CONTENT_TYPE);
+        doall_data.name = name;
+        doall_data.data = data;
+        doall_data.len = len;
+        doall_data.pw_callback = pw_callback;
+        doall_data.pw_callback_data = pw_callback_data;
+        doall_data.result = NULL;
+        doall_data.matchcount = 0;
+        doall_data.handlers =
+            OPENSSL_zalloc(sizeof(*doall_data.handlers)
+                           * lh_STORE_FILE_HANDLER_num_items(file_handlers));
+        doall_data.handler_ctx = NULL;
 
-    result = doall_data.result;
+        lh_STORE_FILE_HANDLER_doall_DOALL_DATA(file_handlers,
+                                               do_all_file_handlers,
+                                               &doall_data);
+        if (doall_data.matchcount > 1)
+            STOREerr(STORE_F_FILE_LOAD, STORE_R_AMBIGUOUS_CONTENT_TYPE);
+        if (doall_data.matchcount == 0)
+            STOREerr(STORE_F_FILE_LOAD, STORE_R_UNSUPPORTED_CONTENT_TYPE);
+
+        if (doall_data.handlers[0]->repeatable) {
+            ctx->last_handler = doall_data.handlers[0];
+            ctx->last_handler_ctx = doall_data.handler_ctx;
+            if (mem) {
+                ctx->last_mem = mem;
+            }
+            ctx->last_data = data;
+            ctx->last_data_len = len;
+            mem = NULL;
+            data = NULL;
+        }
+        result = doall_data.result;
+        OPENSSL_free(doall_data.handlers);
+    }
  err:
-    OPENSSL_free(doall_data.functions);
     OPENSSL_free(name);
-                OPENSSL_free(header);
+    OPENSSL_free(header);
     if (mem == NULL)
         OPENSSL_free(data);
     else
@@ -563,11 +604,25 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
 
 static int file_eof(STORE_LOADER_CTX *ctx)
 {
+    if (ctx->last_handler != NULL
+        && !ctx->last_handler->eof(ctx->last_handler_ctx))
+        return 0;
     return BIO_eof(ctx->file);
 }
 
 static int file_close(STORE_LOADER_CTX *ctx)
 {
+    if (ctx->last_handler != NULL) {
+        ctx->last_handler->destroy_ctx(&ctx->last_handler_ctx);
+        ctx->last_handler_ctx = NULL;
+        ctx->last_handler = NULL;
+        if (ctx->last_mem == NULL)
+            OPENSSL_free(ctx->last_data);
+        else
+            BUF_MEM_free(ctx->last_mem);
+        ctx->last_data = NULL;
+        ctx->last_mem = NULL;
+    }
     BIO_free_all(ctx->file);
     OPENSSL_free(ctx);
     return 1;
@@ -615,6 +670,12 @@ int STORE_FILE_HANDLER_set0_name(STORE_FILE_HANDLER *handler, const char *name)
     return 1;
 }
 
+int STORE_FILE_HANDLER_set_repeatable(STORE_FILE_HANDLER *handler)
+{
+    handler->repeatable = 1;
+    return 1;
+}
+
 int STORE_FILE_HANDLER_set_try_decode(STORE_FILE_HANDLER *handler,
                                       STORE_FILE_try_decode_fn try_decode)
 {
@@ -625,6 +686,32 @@ int STORE_FILE_HANDLER_set_try_decode(STORE_FILE_HANDLER *handler,
     }
 
     handler->try_decode = try_decode;
+    return 1;
+}
+
+int STORE_FILE_HANDLER_set_destroy_ctx(STORE_FILE_HANDLER *handler,
+                                       STORE_FILE_destroy_ctx_fn destroy_ctx)
+{
+    if (destroy_ctx == NULL) {
+        STOREerr(STORE_F_STORE_FILE_HANDLER_SET_DESTROY_CTX,
+                 ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+
+    handler->destroy_ctx = destroy_ctx;
+    return 1;
+}
+
+int STORE_FILE_HANDLER_set_eof(STORE_FILE_HANDLER *handler,
+                               STORE_FILE_eof_fn eof)
+{
+    if (eof == NULL) {
+        STOREerr(STORE_F_STORE_FILE_HANDLER_SET_EOF,
+                 ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+
+    handler->eof = eof;
     return 1;
 }
 

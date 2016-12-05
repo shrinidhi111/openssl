@@ -50,6 +50,11 @@ void destroy_loaders_int(void);
 struct store_file_handler_st {
     const char *name;
     STORE_FILE_try_decode_fn try_decode;
+    STORE_FILE_eof_fn eof;
+    STORE_FILE_destroy_ctx_fn destroy_ctx;
+
+    /* flags */
+    int repeatable;
 };
 DEFINE_LHASH_OF(STORE_FILE_HANDLER);
 
