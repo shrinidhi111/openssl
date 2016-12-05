@@ -39,6 +39,7 @@ static ERR_STRING_DATA STORE_str_functs[] = {
 
 static ERR_STRING_DATA STORE_str_reasons[] = {
     {ERR_REASON(STORE_R_AMBIGUOUS_CONTENT_TYPE), "ambiguous content type"},
+    {ERR_REASON(STORE_R_IS_NOT_A), "is not a"},
     {ERR_REASON(STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED),
      "ui process interrupted or cancelled"},
     {ERR_REASON(STORE_R_UNREGISTERED_SCHEME), "unregistered scheme"},

@@ -206,6 +206,7 @@ int ERR_load_STORE_strings(void);
 
 /* Reason codes. */
 # define STORE_R_AMBIGUOUS_CONTENT_TYPE                   101
+# define STORE_R_IS_NOT_A                                 107
 # define STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED      102
 # define STORE_R_UNREGISTERED_SCHEME                      100
 # define STORE_R_UNSUPPORTED_CONTENT_TYPE                 103
