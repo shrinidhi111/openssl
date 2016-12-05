@@ -56,6 +56,31 @@ static STORE_FILE_HANDLER RSAPrivateKey_handler = {
     try_decode_RSAPrivateKey
 };
 
+static STORE_INFO *try_decode_DSAparams(const char *pem_name,
+                                             const unsigned char *blob,
+                                             size_t len,
+                                             pem_password_cb *pw_callback,
+                                             void *pw_callback_data)
+{
+    STORE_INFO *store_info = NULL;
+    DSA *dsa = NULL;
+
+
+    if (pem_name != NULL
+        && strcmp(pem_name, PEM_STRING_DSAPARAMS) != 0)
+        /* No match */
+        return NULL;
+
+    if ((dsa = d2i_DSAparams(NULL, &blob, len)) != NULL)
+        store_info = STORE_INFO_new_DSAPARAMS(dsa);
+
+    return store_info;
+}
+static STORE_FILE_HANDLER DSAparams_handler = {
+    "DSAparams",
+    try_decode_DSAparams
+};
+
 static STORE_INFO *try_decode_DSAPrivateKey(const char *pem_name,
                                             const unsigned char *blob,
                                             size_t len,
@@ -81,6 +106,31 @@ static STORE_INFO *try_decode_DSAPrivateKey(const char *pem_name,
 static STORE_FILE_HANDLER DSAPrivateKey_handler = {
     "DSAPrivateKey",
     try_decode_DSAPrivateKey
+};
+
+static STORE_INFO *try_decode_ECPKParameters(const char *pem_name,
+                                             const unsigned char *blob,
+                                             size_t len,
+                                             pem_password_cb *pw_callback,
+                                             void *pw_callback_data)
+{
+    STORE_INFO *store_info = NULL;
+    EC_GROUP *ec_group = NULL;
+
+
+    if (pem_name != NULL
+        && strcmp(pem_name, PEM_STRING_ECPARAMETERS) != 0)
+        /* No match */
+        return NULL;
+
+    if ((ec_group = d2i_ECPKParameters(NULL, &blob, len)) != NULL)
+        store_info = STORE_INFO_new_ECPARAMS(ec_group);
+
+    return store_info;
+}
+static STORE_FILE_HANDLER ECPKParameters_handler = {
+    "ECPKParameters",
+    try_decode_ECPKParameters
 };
 
 static STORE_INFO *try_decode_ECPrivateKey(const char *pem_name,
@@ -314,7 +364,9 @@ STORE_FILE_HANDLER *STORE_FILE_unregister_handler(const char *name)
 int store_file_handlers_init(void)
 {
     return store_file_register_handler_int(&RSAPrivateKey_handler)
+        && store_file_register_handler_int(&DSAparams_handler)
         && store_file_register_handler_int(&DSAPrivateKey_handler)
+        && store_file_register_handler_int(&ECPKParameters_handler)
         && store_file_register_handler_int(&ECPrivateKey_handler)
         && store_file_register_handler_int(&PKCS8PrivateKey_handler)
         && store_file_register_handler_int(&PUBKEY_handler)
@@ -325,7 +377,9 @@ int store_file_handlers_init(void)
 void destroy_file_handlers_int(void)
 {
     store_file_unregister_handler_int(RSAPrivateKey_handler.name);
+    store_file_unregister_handler_int(DSAparams_handler.name);
     store_file_unregister_handler_int(DSAPrivateKey_handler.name);
+    store_file_unregister_handler_int(ECPKParameters_handler.name);
     store_file_unregister_handler_int(ECPrivateKey_handler.name);
     store_file_unregister_handler_int(PKCS8PrivateKey_handler.name);
     store_file_unregister_handler_int(PUBKEY_handler.name);
