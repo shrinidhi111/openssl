@@ -128,6 +128,16 @@ int storeutl_main(int argc, char *argv[])
              * ourselves...
              */
             switch (STORE_INFO_get_type(info)) {
+            case STORE_INFO_NAME:
+                break;
+            case STORE_INFO_DSAPARAMS:
+                PEM_write_bio_DSAparams(out,
+                                        (DSA *)STORE_INFO_get0_DSAPARAMS(info));
+                break;
+            case STORE_INFO_ECPARAMS:
+                PEM_write_bio_ECPKParameters(out,
+                                             (EC_GROUP *)STORE_INFO_get0_ECPARAMS(info));
+                break;
             case STORE_INFO_PKEY:
                 {
                     const EVP_PKEY *k = STORE_INFO_get0_PKEY(info);
@@ -185,6 +195,7 @@ int storeutl_main(int argc, char *argv[])
 
  end:
     BIO_free_all(out);
+    OPENSSL_free(passin);
     release_engine(e);
     return ret;
 }
