@@ -29,6 +29,107 @@
  *****/
 
 
+DEFINE_STACK_OF(STORE_INFO)
+static STORE_INFO *try_decode_PKCS12(const char *pem_name,
+                                     const unsigned char *blob, size_t len,
+                                     void **pctx, pem_password_cb *pw_callback,
+                                     void *pw_callback_data)
+{
+    STORE_INFO *store_info = NULL;
+    STACK_OF(STORE_INFO) *ctx = *pctx;
+
+    if (ctx == NULL) {
+        /* Initial parsing */
+        PKCS12 *p12;
+        int ok = 0;
+
+        if (pem_name != NULL)
+            /* No match, there is no PEM PKCS12 tag */
+            return NULL;
+
+        if ((p12 = d2i_PKCS12(NULL, &blob, len)) != NULL) {
+            char *pass = NULL;
+            char tpass[PEM_BUFSIZE];
+            int passlen = 0;
+            EVP_PKEY *pkey = NULL;
+            X509 *cert = NULL;
+            STACK_OF(X509) *chain = NULL;
+
+            if (PKCS12_verify_mac(p12, "", 0)
+                || PKCS12_verify_mac(p12, NULL, 0))
+                pass = "";
+            else {
+                if (pw_callback == NULL)
+                    pw_callback = PEM_def_callback;
+                passlen = pw_callback(tpass, PEM_BUFSIZE, 0, pw_callback_data);
+                if (passlen < 0) {
+                    STOREerr(STORE_F_TRY_DECODE_PKCS12,
+                             STORE_R_PASSPHRASE_CALLBACK_ERROR);
+                    goto p12_end;
+                }
+                if (passlen < PEM_BUFSIZE)
+                    tpass[passlen] = 0;
+                if (!PKCS12_verify_mac(p12, tpass, passlen)) {
+                    STOREerr(STORE_F_TRY_DECODE_PKCS12,
+                             STORE_R_ERROR_VERIFYING_PKCS12_MAC);
+                    goto p12_end;
+                }
+            }
+            pass = tpass;
+
+            if (PKCS12_parse(p12, pass, &pkey, &cert, &chain)) {
+                if ((ctx = sk_STORE_INFO_new_null()) != NULL
+                    && sk_STORE_INFO_push(ctx, STORE_INFO_new_PKEY(pkey)) != 0
+                    && sk_STORE_INFO_push(ctx, STORE_INFO_new_CERT(cert)) != 0
+                    && (ok = 1))
+                    while(sk_X509_num(chain) > 0) {
+                        X509 *ca = sk_X509_value(chain, 0);
+
+                        if (sk_STORE_INFO_push(ctx, STORE_INFO_new_CERT(ca))
+                            == 0) {
+                            ok = 0;
+                            break;
+                        }
+
+                        (void)sk_X509_shift(chain);
+                    }
+                *pctx = ctx;
+
+            }
+        }
+     p12_end:
+        PKCS12_free(p12);
+        if (!ok)
+            /* The caller takes care of destroying my ctx */
+            return NULL;
+    }
+
+    if (ctx != NULL)
+        store_info = sk_STORE_INFO_shift(ctx);
+
+    return store_info;
+}
+static int eof_PKCS12(void *ctx_)
+{
+    STACK_OF(STORE_INFO) *ctx = ctx_;
+
+    return ctx == NULL || sk_STORE_INFO_num(ctx) == 0;
+}
+static void destroy_ctx_PKCS12(void **pctx)
+{
+    STACK_OF(STORE_INFO) *ctx = *pctx;
+
+    sk_STORE_INFO_pop_free(ctx, STORE_INFO_free);
+    *pctx = NULL;
+}
+static STORE_FILE_HANDLER PKCS12_handler = {
+    "PKCS12",
+    try_decode_PKCS12,
+    eof_PKCS12,
+    destroy_ctx_PKCS12,
+    1                            /* repeatable */
+};
+
 static STORE_INFO *try_decode_RSAPrivateKey(const char *pem_name,
                                             const unsigned char *blob,
                                             size_t len, void **pctx,
@@ -363,7 +464,8 @@ STORE_FILE_HANDLER *STORE_FILE_unregister_handler(const char *name)
 
 int store_file_handlers_init(void)
 {
-    return store_file_register_handler_int(&RSAPrivateKey_handler)
+    return store_file_register_handler_int(&PKCS12_handler)
+        && store_file_register_handler_int(&RSAPrivateKey_handler)
         && store_file_register_handler_int(&DSAparams_handler)
         && store_file_register_handler_int(&DSAPrivateKey_handler)
         && store_file_register_handler_int(&ECPKParameters_handler)
@@ -376,6 +478,7 @@ int store_file_handlers_init(void)
 
 void destroy_file_handlers_int(void)
 {
+    store_file_unregister_handler_int(PKCS12_handler.name);
     store_file_unregister_handler_int(RSAPrivateKey_handler.name);
     store_file_unregister_handler_int(DSAparams_handler.name);
     store_file_unregister_handler_int(DSAPrivateKey_handler.name);
