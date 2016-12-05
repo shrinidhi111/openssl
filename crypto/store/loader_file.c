@@ -163,8 +163,8 @@ typedef struct store_file_handler_st {
 static STORE_INFO *try_decode_PKCS12(const char *pem_name,
                                      const char *pem_header,
                                      const unsigned char *blob, size_t len,
-                                     void **pctx, const UI_METHOD *password_ui,
-                                     void *password_ui_data)
+                                     void **pctx, const UI_METHOD *ui_method,
+                                     void *ui_data)
 {
     STORE_INFO *store_info = NULL;
     STACK_OF(STORE_INFO) *ctx = *pctx;
@@ -189,9 +189,9 @@ static STORE_INFO *try_decode_PKCS12(const char *pem_name,
                 || PKCS12_verify_mac(p12, NULL, 0))
                 pass = "";
             else {
-                if ((pass = file_get_pass(password_ui, tpass, PEM_BUFSIZE,
+                if ((pass = file_get_pass(ui_method, tpass, PEM_BUFSIZE,
                                           "PKCS12 import password",
-                                          password_ui_data)) == NULL) {
+                                          ui_data)) == NULL) {
                     STOREerr(STORE_F_TRY_DECODE_PKCS12,
                              STORE_R_PASSPHRASE_CALLBACK_ERROR);
                     goto p12_end;
