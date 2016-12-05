@@ -66,13 +66,8 @@ indir "store_$$" => sub {
             ok(run(app(["openssl", "storeutl", srctop_file($_)])));
         }
         foreach (@generated_files) {
-        SKIP:
-            {
-                skip "PKCS#12 files not currently supported", 1 if m|\.p12$|;
-
-                ok(run(app(["openssl", "storeutl", "-passin", "pass:password",
-                            $_])));
-            }
+            ok(run(app(["openssl", "storeutl", "-passin", "pass:password",
+                        $_])));
         }
     }
 }, create => 1, cleanup => 0;
