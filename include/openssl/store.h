@@ -165,6 +165,8 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_FILE_OPEN                                109
 # define STORE_F_STORE_FILE_HANDLER_NEW                   112
 # define STORE_F_STORE_FILE_HANDLER_SET0_NAME             113
+# define STORE_F_STORE_FILE_HANDLER_SET_DESTROY_CTX       118
+# define STORE_F_STORE_FILE_HANDLER_SET_EOF               119
 # define STORE_F_STORE_FILE_HANDLER_SET_TRY_DECODE        114
 # define STORE_F_STORE_FILE_UNREGISTER_HANDLER_INT        110
 # define STORE_F_STORE_INFO_NEW_CERT                      100
