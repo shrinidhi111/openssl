@@ -30,17 +30,17 @@ my @generated_files =
      ### generated locally
      ### These examples were pilfered from OpenConnect's test suite
 
-     "user-key-pkcs1.pem", "user-key-pkcs1.der",
-     "user-key-pkcs1-aes128.pem",
-     "user-key-pkcs8.pem", "user-key-pkcs8.der",
-     "user-key-pkcs8-pbes1-sha1-3des.pem", "user-key-pkcs8-pbes1-sha1-3des.der",
-     "user-key-pkcs8-pbes2-sha1.pem", "user-key-pkcs8-pbes2-sha1.der",
-     "user-key-sha1-3des-sha1.p12", "user-key-sha1-3des-sha256.p12",
-     "user-key-aes256-cbc-sha256.p12",
-     "user-key-md5-des-sha1.p12",
-     "user-key-aes256-cbc-md5-des-sha256.p12",
-     "user-key-pkcs8-pbes2-sha256.pem", "user-key-pkcs8-pbes2-sha256.der",
-     "user-key-pkcs8-pbes1-md5-des.pem", "user-key-pkcs8-pbes1-md5-des.der",
+     "rsa-key-pkcs1.pem", "rsa-key-pkcs1.der",
+     "rsa-key-pkcs1-aes128.pem",
+     "rsa-key-pkcs8.pem", "rsa-key-pkcs8.der",
+     "rsa-key-pkcs8-pbes1-sha1-3des.pem", "rsa-key-pkcs8-pbes1-sha1-3des.der",
+     "rsa-key-pkcs8-pbes2-sha1.pem", "rsa-key-pkcs8-pbes2-sha1.der",
+     "rsa-key-sha1-3des-sha1.p12", "rsa-key-sha1-3des-sha256.p12",
+     "rsa-key-aes256-cbc-sha256.p12",
+     "rsa-key-md5-des-sha1.p12",
+     "rsa-key-aes256-cbc-md5-des-sha256.p12",
+     "rsa-key-pkcs8-pbes2-sha256.pem", "rsa-key-pkcs8-pbes2-sha256.der",
+     "rsa-key-pkcs8-pbes1-md5-des.pem", "rsa-key-pkcs8-pbes1-md5-des.der",
      "dsa-key-pkcs1.pem", "dsa-key-pkcs1.der",
      "dsa-key-pkcs1-aes128.pem",
      "dsa-key-pkcs8.pem", "dsa-key-pkcs8.der",
@@ -79,19 +79,19 @@ indir "store_$$" => sub {
 
 sub init {
     return (
-            # user-key-pkcs1.pem
+            # rsa-key-pkcs1.pem
             run(app(["openssl", "genrsa",
-                     "-out", "user-key-pkcs1.pem", "2432"]))
+                     "-out", "rsa-key-pkcs1.pem", "2432"]))
             # dsa-key-pkcs1.pem
             && run(app(["openssl", "dsaparam", "-genkey",
                         "-out", "dsa-key-pkcs1.pem", "1024"]))
             # ec-key-pkcs1.pem (one might think that 'genec' would be practical)
             && run(app(["openssl", "ecparam", "-genkey", "-name", "prime256v1",
                         "-out", "ec-key-pkcs1.pem"]))
-            # user-key-pkcs1-aes128.pem
+            # rsa-key-pkcs1-aes128.pem
             && run(app(["openssl", "rsa", "-passout", "pass:password", "-aes128",
-                        "-in", "user-key-pkcs1.pem",
-                        "-out", "user-key-pkcs1-aes128.pem"]))
+                        "-in", "rsa-key-pkcs1.pem",
+                        "-out", "rsa-key-pkcs1-aes128.pem"]))
             # dsa-key-pkcs1-aes128.pem
             && run(app(["openssl", "dsa", "-passout", "pass:password", "-aes128",
                         "-in", "dsa-key-pkcs1.pem",
