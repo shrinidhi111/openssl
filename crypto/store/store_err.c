@@ -33,12 +33,17 @@ static ERR_STRING_DATA STORE_str_functs[] = {
     {ERR_FUNC(STORE_F_STORE_UNREGISTER_LOADER_INT),
      "store_unregister_loader_int"},
     {ERR_FUNC(STORE_F_TRY_DECODE_PARAMS), "try_decode_params"},
+    {ERR_FUNC(STORE_F_TRY_DECODE_PKCS12), "try_decode_PKCS12"},
     {0, NULL}
 };
 
 static ERR_STRING_DATA STORE_str_reasons[] = {
     {ERR_REASON(STORE_R_AMBIGUOUS_CONTENT_TYPE), "ambiguous content type"},
+    {ERR_REASON(STORE_R_ERROR_VERIFYING_PKCS12_MAC),
+     "error verifying pkcs12 mac"},
     {ERR_REASON(STORE_R_IS_NOT_A), "is not a"},
+    {ERR_REASON(STORE_R_PASSPHRASE_CALLBACK_ERROR),
+     "passphrase callback error"},
     {ERR_REASON(STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED),
      "ui process interrupted or cancelled"},
     {ERR_REASON(STORE_R_UNREGISTERED_SCHEME), "unregistered scheme"},
