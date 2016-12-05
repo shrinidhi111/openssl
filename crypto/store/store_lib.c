@@ -118,6 +118,24 @@ STORE_INFO *STORE_INFO_new_NAME(char *name)
     return info;
 }
 
+STORE_INFO *STORE_INFO_new_DSAPARAMS(DSA *dsa_params)
+{
+    STORE_INFO *info = store_info_new(STORE_INFO_DSAPARAMS, dsa_params);
+
+    if (info == NULL)
+        STOREerr(STORE_F_STORE_INFO_NEW_DSAPARAMS, ERR_R_MALLOC_FAILURE);
+    return info;
+}
+
+STORE_INFO *STORE_INFO_new_ECPARAMS(EC_GROUP *ec_params)
+{
+    STORE_INFO *info = store_info_new(STORE_INFO_ECPARAMS, ec_params);
+
+    if (info == NULL)
+        STOREerr(STORE_F_STORE_INFO_NEW_ECPARAMS, ERR_R_MALLOC_FAILURE);
+    return info;
+}
+
 STORE_INFO *STORE_INFO_new_PKEY(EVP_PKEY *pkey)
 {
     STORE_INFO *info = store_info_new(STORE_INFO_PKEY, pkey);
@@ -160,6 +178,20 @@ const char *STORE_INFO_get0_NAME(const STORE_INFO *store_info)
     return NULL;
 }
 
+const DSA *STORE_INFO_get0_DSAPARAMS(const STORE_INFO *store_info)
+{
+    if (store_info->type == STORE_INFO_DSAPARAMS)
+        return store_info->_.dsaparams;
+    return NULL;
+}
+
+const EC_GROUP *STORE_INFO_get0_ECPARAMS(const STORE_INFO *store_info)
+{
+    if (store_info->type == STORE_INFO_ECPARAMS)
+        return store_info->_.ecparams;
+    return NULL;
+}
+
 const EVP_PKEY *STORE_INFO_get0_PKEY(const STORE_INFO *store_info)
 {
     if (store_info->type == STORE_INFO_PKEY)
@@ -190,6 +222,12 @@ void STORE_INFO_free(STORE_INFO *store_info)
         switch (store_info->type) {
         case STORE_INFO_NAME:
             OPENSSL_free(store_info->_.name);
+            break;
+        case STORE_INFO_DSAPARAMS:
+            DSA_free(store_info->_.dsaparams);
+            break;
+        case STORE_INFO_ECPARAMS:
+            EC_GROUP_free(store_info->_.ecparams);
             break;
         case STORE_INFO_PKEY:
             EVP_PKEY_free(store_info->_.pkey);

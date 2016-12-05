@@ -107,10 +107,14 @@ STORE_LOADER *STORE_unregister_loader(const char *scheme);
  * STORE_INFO_NAME is typically found when getting a listing of
  * available "files" / "tokens" / what have you.
  */
-# define STORE_INFO_NAME 0       /* char * */
-# define STORE_INFO_PKEY 1       /* EVP_PKEY * */
-# define STORE_INFO_CERT 2       /* X509 * */
-# define STORE_INFO_CRL  3       /* X509_CRL * */
+enum STORE_INFO_types {
+    STORE_INFO_NAME = 0,         /* char * */
+    STORE_INFO_DSAPARAMS,        /* DSA * */
+    STORE_INFO_ECPARAMS,         /* EC_GROUP * */
+    STORE_INFO_PKEY,             /* EVP_PKEY * */
+    STORE_INFO_CERT,             /* X509 * */
+    STORE_INFO_CRL               /* X509_CRL * */
+};
 
 /*
  * Functions to generate STORE_INFOs, one function for each type we
@@ -121,6 +125,8 @@ STORE_LOADER *STORE_unregister_loader(const char *scheme);
  * and will therefore be freed when the STORE_INFO is freed.
  */
 STORE_INFO *STORE_INFO_new_NAME(char *name);
+STORE_INFO *STORE_INFO_new_DSAPARAMS(DSA *dsa_params);
+STORE_INFO *STORE_INFO_new_ECPARAMS(EC_GROUP *ec_group);
 STORE_INFO *STORE_INFO_new_PKEY(EVP_PKEY *pkey);
 STORE_INFO *STORE_INFO_new_CERT(X509 *x509);
 STORE_INFO *STORE_INFO_new_CRL(X509_CRL *crl);
@@ -130,6 +136,8 @@ STORE_INFO *STORE_INFO_new_CRL(X509_CRL *crl);
  */
 int STORE_INFO_get_type(const STORE_INFO *store_info);
 const char *STORE_INFO_get0_NAME(const STORE_INFO *store_info);
+const DSA *STORE_INFO_get0_DSAPARAMS(const STORE_INFO *store_info);
+const EC_GROUP *STORE_INFO_get0_ECPARAMS(const STORE_INFO *store_info);
 const EVP_PKEY *STORE_INFO_get0_PKEY(const STORE_INFO *store_info);
 const X509 *STORE_INFO_get0_CERT(const STORE_INFO *store_info);
 const X509_CRL *STORE_INFO_get0_CRL(const STORE_INFO *store_info);
@@ -161,6 +169,8 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_STORE_FILE_UNREGISTER_HANDLER_INT        110
 # define STORE_F_STORE_INFO_NEW_CERT                      100
 # define STORE_F_STORE_INFO_NEW_CRL                       101
+# define STORE_F_STORE_INFO_NEW_DSAPARAMS                 116
+# define STORE_F_STORE_INFO_NEW_ECPARAMS                  117
 # define STORE_F_STORE_INFO_NEW_NAME                      102
 # define STORE_F_STORE_INFO_NEW_PKEY                      103
 # define STORE_F_STORE_INIT_ONCE                          104
