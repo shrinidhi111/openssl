@@ -11,6 +11,8 @@
 
 static char *type_strings[] = {
     "Name",                      /* STORE_INFO_NAME */
+    "DSA parameters",            /* STORE_INFO_DSAPARAMS */
+    "EC parameters",             /* STORE_INFO_ECPARAMS */
     "Pkey",                      /* STORE_INFO_PKEY */
     "Certificate",               /* STORE_INFO_CERT */
     "CRL"                        /* STORE_INFO_CRL */

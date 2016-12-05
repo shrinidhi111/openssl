@@ -19,6 +19,8 @@ struct store_info_st {
     int type;
     union {
         char *name;              /* when type == STORE_INFO_NAME */
+        DSA *dsaparams;          /* when type == STORE_INFO_DSAPARAMS */
+        EC_GROUP *ecparams;      /* when type == STORE_INFO_ECPARAMS */
         EVP_PKEY *pkey;          /* when type == STORE_INFO_PKEY */
         X509 *x509;              /* when type == STORE_INFO_X509 */
         X509_CRL *crl;           /* when type == STORE_INFO_CRL */
