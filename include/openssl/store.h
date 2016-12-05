@@ -179,11 +179,14 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_STORE_LOADER_NEW                         105
 # define STORE_F_STORE_OPEN                               106
 # define STORE_F_STORE_UNREGISTER_LOADER_INT              107
+# define STORE_F_TRY_DECODE_PKCS12                        115
 # define STORE_F_TRY_DECODE_PKCS8PRIVATEKEY               111
 
 /* Reason codes. */
 # define STORE_R_AMBIGUOUS_CONTENT_TYPE                   101
 # define STORE_R_BAD_PASSWORD_READ                        102
+# define STORE_R_ERROR_VERIFYING_PKCS12_MAC               108
+# define STORE_R_PASSPHRASE_CALLBACK_ERROR                109
 # define STORE_R_UNREGISTERED_NAME                        103
 # define STORE_R_UNREGISTERED_SCHEME                      100
 # define STORE_R_UNSUPPORTED_CONTENT_TYPE                 104
