@@ -8,6 +8,7 @@
  */
 
 #include "internal/thread_once.h"
+#include <openssl/dsa.h>
 #include <openssl/engine.h>
 #include <openssl/evp.h>
 #include <openssl/lhash.h>
