@@ -21,6 +21,7 @@
 #include <openssl/ui.h>
 #include <openssl/x509.h>        /* For the PKCS8 stuff o.O */
 #include "internal/asn1_int.h"
+#include "internal/store_int.h"
 #include "store_local.h"
 
 #include "e_os.h"
@@ -786,6 +787,40 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
  err:
     OPENSSL_free(pem_name);
     OPENSSL_free(pem_header);
+    OPENSSL_free(data);
+    return result;
+}
+
+STORE_INFO *store_file_decode_data(const char *pem_name, const char *pem_header,
+                                   unsigned char *data, size_t len,
+                                   const UI_METHOD *password_ui,
+                                   void *password_ui_data)
+{
+    if (!store_init_once())
+        return NULL;
+
+    return file_load_try_decode(NULL, pem_name, pem_header, data, len,
+                                password_ui, password_ui_data);
+}
+
+STORE_INFO *store_file_decode_pem_bio(BIO *bp, const UI_METHOD *password_ui,
+                                      void *password_ui_data)
+{
+    char *name = NULL;           /* PEM record name */
+    char *header = NULL;         /* PEM record header */
+    unsigned char *data = NULL;  /* DER encoded data */
+    long len = 0;                /* DER encoded data length */
+    STORE_INFO *result = NULL;
+
+    if (!store_init_once())
+        return NULL;
+
+    if (file_read_pem(bp, &name, &header, &data, &len,
+                      password_ui, password_ui_data))
+        result = file_load_try_decode(NULL, name, header, data, len,
+                                      password_ui, password_ui_data);
+    OPENSSL_free(name);
+    OPENSSL_free(header);
     OPENSSL_free(data);
     return result;
 }
