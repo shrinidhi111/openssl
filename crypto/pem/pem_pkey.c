@@ -19,75 +19,48 @@
 #include <openssl/dh.h>
 #include "internal/asn1_int.h"
 #include "internal/evp_int.h"
+#include <openssl/store.h>
+#include "internal/store_int.h"
+#include <openssl/ui.h>
 
 int pem_check_suffix(const char *pem_str, const char *suffix);
 
 EVP_PKEY *PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb,
                                   void *u)
 {
-    char *nm = NULL;
-    const unsigned char *p = NULL;
-    unsigned char *data = NULL;
-    long len;
-    int slen;
     EVP_PKEY *ret = NULL;
+    STORE_INFO *info = NULL;
+    UI_METHOD *ui_method = NULL;
 
-    if (!PEM_bytes_read_bio(&data, &len, &nm, PEM_STRING_EVP_PKEY, bp, cb, u))
+    if ((ui_method = UI_UTIL_wrap_read_pem_callback(cb, 0)) == NULL)
         return NULL;
-    p = data;
-
-    if (strcmp(nm, PEM_STRING_PKCS8INF) == 0) {
-        PKCS8_PRIV_KEY_INFO *p8inf;
-        p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, len);
-        if (!p8inf)
-            goto p8err;
-        ret = EVP_PKCS82PKEY(p8inf);
-        if (x) {
-            EVP_PKEY_free((EVP_PKEY *)*x);
-            *x = ret;
+    ERR_set_mark();
+    for (;;) {
+        if ((info = store_file_decode_pem_bio(bp, ui_method, u)) == NULL) {
+            if (ERR_GET_REASON(ERR_peek_error()) == PEM_R_NO_START_LINE) {
+                ERR_add_error_data(2, "Expecting: ", PEM_STRING_EVP_PKEY);
+                goto err;
+            }
+            if (!BIO_eof(bp))
+                continue;
         }
-        PKCS8_PRIV_KEY_INFO_free(p8inf);
-    } else if (strcmp(nm, PEM_STRING_PKCS8) == 0) {
-        PKCS8_PRIV_KEY_INFO *p8inf;
-        X509_SIG *p8;
-        int klen;
-        char psbuf[PEM_BUFSIZE];
-        p8 = d2i_X509_SIG(NULL, &p, len);
-        if (!p8)
-            goto p8err;
-        if (cb)
-            klen = cb(psbuf, PEM_BUFSIZE, 0, u);
-        else
-            klen = PEM_def_callback(psbuf, PEM_BUFSIZE, 0, u);
-        if (klen <= 0) {
-            PEMerr(PEM_F_PEM_READ_BIO_PRIVATEKEY, PEM_R_BAD_PASSWORD_READ);
-            X509_SIG_free(p8);
-            goto err;
-        }
-        p8inf = PKCS8_decrypt(p8, psbuf, klen);
-        X509_SIG_free(p8);
-        if (!p8inf)
-            goto p8err;
-        ret = EVP_PKCS82PKEY(p8inf);
-        if (x) {
-            EVP_PKEY_free((EVP_PKEY *)*x);
-            *x = ret;
-        }
-        PKCS8_PRIV_KEY_INFO_free(p8inf);
-    } else if ((slen = pem_check_suffix(nm, "PRIVATE KEY")) > 0) {
-        const EVP_PKEY_ASN1_METHOD *ameth;
-        ameth = EVP_PKEY_asn1_find_str(NULL, nm, slen);
-        if (!ameth || !ameth->old_priv_decode)
-            goto p8err;
-        ret = d2i_PrivateKey(ameth->pkey_id, x, &p, len);
+        if (STORE_INFO_get_type(info) == STORE_INFO_PKEY)
+            break;
+        STORE_INFO_free(info);
     }
- p8err:
-    if (ret == NULL)
-        PEMerr(PEM_F_PEM_READ_BIO_PRIVATEKEY, ERR_R_ASN1_LIB);
+    if ((ret = STORE_INFO_get0_PKEY(info)) != NULL
+        && x != NULL) {
+        *x = ret;
+        ERR_pop_to_mark();
+    }
+
  err:
-    OPENSSL_free(nm);
-    OPENSSL_clear_free(data, len);
-    return (ret);
+    UI_destroy_method(ui_method);
+    if (ret != NULL)
+        OPENSSL_free(info);
+    else
+        STORE_INFO_free(info);
+    return ret;
 }
 
 int PEM_write_bio_PrivateKey(BIO *bp, EVP_PKEY *x, const EVP_CIPHER *enc,
