@@ -8,6 +8,7 @@
  */
 
 #include <openssl/e_os2.h>
+#include <openssl/err.h>
 
 /*
  * need for #define _POSIX_C_SOURCE arises whenever you pass -ansi to gcc
@@ -414,6 +415,7 @@ static int open_console(UI *ui)
 
 #if defined(TTY_get) && !defined(OPENSSL_SYS_VMS)
     if (TTY_get(fileno(tty_in), &tty_orig) == -1) {
+        fprintf(stderr, "DEBUG[open_console]: errno = %d\n", errno);
 # ifdef ENOTTY
         if (errno == ENOTTY)
             is_a_tty = 0;
@@ -428,7 +430,14 @@ static int open_console(UI *ui)
             is_a_tty = 0;
         else
 # endif
-            return 0;
+            {
+                char tmp_num[10];
+                BIO_snprintf(tmp_num, sizeof(tmp_num) - 1, "%d", errno);
+                UIerr(UI_F_OPEN_CONSOLE, UI_R_UNKNOWN_TTYGET_ERRNO_VALUE);
+                ERR_add_error_data(1, tmp_num);
+
+                return 0;
+            }
     }
 #endif
 #ifdef OPENSSL_SYS_VMS
