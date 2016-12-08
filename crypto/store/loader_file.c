@@ -511,57 +511,19 @@ static STORE_LOADER_CTX *file_open(const char *authority, const char *path,
     return NULL;
 }
 
-static STORE_INFO *file_load(STORE_LOADER_CTX *ctx, const UI_METHOD *ui_method,
-                             void *ui_data)
+static STORE_INFO *file_load_try_decode(STORE_LOADER_CTX *ctx,
+                                        const char *pem_name,
+                                        const char *pem_header,
+                                        unsigned char *data, size_t len,
+                                        const UI_METHOD *ui_method,
+                                        void *ui_data)
 {
-    char *pem_name = NULL;       /* PEM record name */
-    char *pem_header = NULL;     /* PEM record header */
-    unsigned char *data = NULL;  /* DER encoded data */
-    long len = 0;                /* DER encoded data length */
     STORE_INFO *result = NULL;
-    int r = 0;
-    BUF_MEM *mem = NULL;
+    BUF_MEM *new_mem = NULL;
+    char *new_pem_name = NULL;
+    int t = 0;
 
-    if (ctx->last_handler != NULL) {
-        result = ctx->last_handler->try_decode(NULL, NULL, NULL, 0,
-                                               &ctx->last_handler_ctx,
-                                               ui_method, ui_data);
-
-        if (result != NULL)
-            return result;
-
-        ctx->last_handler->destroy_ctx(&ctx->last_handler_ctx);
-        ctx->last_handler_ctx = NULL;
-        ctx->last_handler = NULL;
-    }
-
-    if (ctx->is_pem) {
-        r = PEM_read_bio(ctx->file, &pem_name, &pem_header, &data, &len);
-        if (r <= 0)
-            return NULL;
-
-        if (strlen(pem_header) > 10) {
-            EVP_CIPHER_INFO cipher;
-            struct pem_pass_data pass_data;
-
-            if (!PEM_get_EVP_CIPHER_INFO(pem_header, &cipher)
-                || !file_fill_pem_pass_data(&pass_data, "PEM", ui_method,
-                                            ui_data)
-                || !PEM_do_header(&cipher, data, &len, file_get_pem_pass,
-                                  &pass_data)) {
-                goto err;
-            }
-        }
-    } else {
-        if ((len = asn1_d2i_read_bio(ctx->file, &mem)) < 0)
-            goto err;
-
-        data = (unsigned char *)mem->data;
-        len = (long)mem->length;
-    }
-
-    result = NULL;
-
+ again:
     {
         int matchcount = 0;
         size_t i = 0;
@@ -571,7 +533,7 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx, const UI_METHOD *ui_method,
                            * OSSL_NELEM(file_handlers));
 
         if (matching_handlers == NULL) {
-            STOREerr(STORE_F_FILE_LOAD, ERR_R_MALLOC_FAILURE);
+            STOREerr(STORE_F_FILE_LOAD_TRY_DECODE, ERR_R_MALLOC_FAILURE);
             goto err;
         }
 
@@ -584,7 +546,7 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx, const UI_METHOD *ui_method,
                                                          ui_method, ui_data);
 
             if (tmp_result == NULL) {
-                STOREerr(STORE_F_FILE_LOAD, STORE_R_IS_NOT_A);
+                STOREerr(STORE_F_FILE_LOAD_TRY_DECODE, STORE_R_IS_NOT_A);
                 ERR_add_error_data(1, handler->name);
             } else {
                 if (matching_handlers)
@@ -610,28 +572,143 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx, const UI_METHOD *ui_method,
         }
 
         if (matchcount > 1)
-            STOREerr(STORE_F_FILE_LOAD, STORE_R_AMBIGUOUS_CONTENT_TYPE);
+            STOREerr(STORE_F_FILE_LOAD_TRY_DECODE,
+                     STORE_R_AMBIGUOUS_CONTENT_TYPE);
         if (matchcount == 0)
-            STOREerr(STORE_F_FILE_LOAD, STORE_R_UNSUPPORTED_CONTENT_TYPE);
+            STOREerr(STORE_F_FILE_LOAD_TRY_DECODE,
+                     STORE_R_UNSUPPORTED_CONTENT_TYPE);
         else if (matching_handlers[0]->repeatable) {
-            ctx->last_handler = matching_handlers[0];
-            ctx->last_handler_ctx = handler_ctx;
-            mem = NULL;
-            data = NULL;
+            if (ctx == NULL) {
+                STOREerr(STORE_F_FILE_LOAD_TRY_DECODE,
+                         STORE_R_UNSUPPORTED_CONTENT_TYPE);
+                STORE_INFO_free(result);
+                result = NULL;
+            } else {
+                ctx->last_handler = matching_handlers[0];
+                ctx->last_handler_ctx = handler_ctx;
+            }
         }
 
         OPENSSL_free(matching_handlers);
     }
 
-    if (result)
+ err:
+    if (new_pem_name != NULL)
+        OPENSSL_free(new_pem_name);
+    if (new_mem != NULL)
+        BUF_MEM_free(new_mem);
+
+    if (result != NULL
+        && (t = STORE_INFO_get_type(result)) == STORE_INFO_DECODED) {
+        pem_name = new_pem_name = store_info_get0_DECODED_pem_name(result);
+        new_mem = store_info_get0_DECODED_buffer(result);
+        data = (unsigned char *)new_mem->data;
+        len = new_mem->length;
+        OPENSSL_free(result);
+        result = NULL;
+        goto again;
+    }
+
+    if (result != NULL)
         ERR_clear_error();
+
+    return result;
+}
+
+static STORE_INFO *file_load_try_repeat(STORE_LOADER_CTX *ctx,
+                                        const UI_METHOD *ui_method,
+                                        void *ui_data)
+{
+    STORE_INFO *result = NULL;
+
+    if (ctx->last_handler != NULL) {
+        result = ctx->last_handler->try_decode(NULL, NULL, NULL, 0,
+                                               &ctx->last_handler_ctx,
+                                               ui_method, ui_data);
+
+        if (result == NULL) {
+            ctx->last_handler->destroy_ctx(&ctx->last_handler_ctx);
+            ctx->last_handler_ctx = NULL;
+            ctx->last_handler = NULL;
+        }
+    }
+    return result;
+}
+
+static int file_read_pem(BIO *bp, char **pem_name, char **pem_header,
+                         unsigned char **data, long *len,
+                         const UI_METHOD *ui_method,
+                         void *ui_data)
+{
+    int i = PEM_read_bio(bp, pem_name, pem_header, data, len);
+
+    if (i <= 0)
+        return 0;
+
+    if (strlen(*pem_header) > 10) {
+        EVP_CIPHER_INFO cipher;
+        struct pem_pass_data pass_data;
+
+        if (!PEM_get_EVP_CIPHER_INFO(*pem_header, &cipher)
+            || !file_fill_pem_pass_data(&pass_data, "PEM", ui_method,
+                                        ui_data)
+            || !PEM_do_header(&cipher, *data, len, file_get_pem_pass,
+                              &pass_data)) {
+            OPENSSL_free(*pem_name);
+            OPENSSL_free(*pem_header);
+            OPENSSL_free(*data);
+            *pem_name = NULL;
+            *pem_header = NULL;
+            *data = NULL;
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int file_read_asn1(BIO *bp, unsigned char **data, long *len)
+{
+    BUF_MEM *mem = NULL;
+
+    if (asn1_d2i_read_bio(bp, &mem) < 0)
+        return 0;
+
+    *data = (unsigned char *)mem->data;
+    *len = (long)mem->length;
+    OPENSSL_free(mem);
+
+    return 1;
+}
+
+static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
+                             const UI_METHOD *ui_method,
+                             void *ui_data)
+{
+    char *pem_name = NULL;       /* PEM record name */
+    char *pem_header = NULL;     /* PEM record header */
+    unsigned char *data = NULL;  /* DER encoded data */
+    long len = 0;                /* DER encoded data length */
+    STORE_INFO *result = NULL;
+
+    result = file_load_try_repeat(ctx, ui_method, ui_data);
+    if (result != NULL)
+        return result;
+
+    if (ctx->is_pem) {
+        if (!file_read_pem(ctx->file, &pem_name, &pem_header, &data, &len,
+                           ui_method, ui_data))
+            goto err;
+    } else {
+        if (!file_read_asn1(ctx->file, &data, &len))
+            goto err;
+    }
+
+    result = file_load_try_decode(ctx, pem_name, pem_header, data, len,
+                                  ui_method, ui_data);
  err:
     OPENSSL_free(pem_name);
     OPENSSL_free(pem_header);
-    if (mem == NULL)
-        OPENSSL_free(data);
-    else
-        BUF_MEM_free(mem);
+    OPENSSL_free(data);
     return result;
 }
 
