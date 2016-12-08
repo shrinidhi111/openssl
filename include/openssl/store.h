@@ -173,6 +173,7 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_FILE_OPEN                                111
 # define STORE_F_STORE_INFO_NEW_CERT                      100
 # define STORE_F_STORE_INFO_NEW_CRL                       101
+# define STORE_F_STORE_INFO_NEW_DECODED                   114
 # define STORE_F_STORE_INFO_NEW_NAME                      102
 # define STORE_F_STORE_INFO_NEW_PARAMS                    103
 # define STORE_F_STORE_INFO_NEW_PKEY                      104
