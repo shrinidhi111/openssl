@@ -148,9 +148,10 @@ void STORE_INFO_free(STORE_INFO *store_info);
  *****/
 
 typedef struct store_loader_st STORE_LOADER;
-STORE_LOADER *STORE_LOADER_new(void);
+STORE_LOADER *STORE_LOADER_new(ENGINE *e);
+const ENGINE *STORE_LOADER_get0_engine(const STORE_LOADER *store_loader);
 int STORE_LOADER_set0_scheme(STORE_LOADER *store_loader, const char *scheme);
-const char *STORE_LOADER_get0_scheme(const STORE_LOADER *loader);
+const char *STORE_LOADER_get0_scheme(const STORE_LOADER *store_loader);
 /* struct store_loader_st is defined differently by each loader */
 typedef struct store_loader_ctx_st STORE_LOADER_CTX;
 typedef STORE_LOADER_CTX *(*STORE_open_fn)(const char *scheme,
@@ -174,6 +175,15 @@ int STORE_LOADER_free(STORE_LOADER *store_loader);
 
 int STORE_register_loader(STORE_LOADER *loader);
 STORE_LOADER *STORE_unregister_loader(const char *scheme);
+
+/******************************************************************************
+ *
+ *  Functions to list STORE loaders
+ *
+ *****/
+int STORE_do_all_loaders(void (*do_function) (const STORE_LOADER *loader,
+                                              void *do_arg),
+                         void *do_arg);
 
 
 /*****************************************************************************/

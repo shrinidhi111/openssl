@@ -4261,3 +4261,5 @@ STORE_open_file                         4211	1_1_1	EXIST::FUNCTION:
 STORE_INFO_new_PARAMS                   4212	1_1_1	EXIST::FUNCTION:
 STORE_INFO_new_ENDOFDATA                4213	1_1_1	EXIST::FUNCTION:
 STORE_LOADER_get0_scheme                4214	1_1_1	EXIST::FUNCTION:
+STORE_LOADER_get0_engine                4215	1_1_1	EXIST::FUNCTION:
+STORE_do_all_loaders                    4216	1_1_1	EXIST::FUNCTION:
