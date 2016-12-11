@@ -1105,6 +1105,7 @@ static int file_close(STORE_LOADER_CTX *ctx)
 static STORE_LOADER store_file_loader =
     {
         "file",
+        NULL,
         file_open,
         file_load,
         file_eof,

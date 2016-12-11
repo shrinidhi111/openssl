@@ -19,14 +19,20 @@
  *
  *****/
 
-STORE_LOADER *STORE_LOADER_new()
+STORE_LOADER *STORE_LOADER_new(ENGINE *e)
 {
     STORE_LOADER *res = OPENSSL_zalloc(sizeof(*res));
 
     if (res == NULL)
         STOREerr(STORE_F_STORE_LOADER_NEW, ERR_R_MALLOC_FAILURE);
 
+    res->engine = e;
     return res;
+}
+
+const ENGINE *STORE_LOADER_get0_engine(const STORE_LOADER *loader)
+{
+    return loader->engine;
 }
 
 int STORE_LOADER_set0_scheme(STORE_LOADER *loader, const char *scheme)
@@ -167,4 +173,18 @@ STORE_LOADER *STORE_unregister_loader(const char *scheme)
 void destroy_loaders_int(void)
 {
     lh_STORE_LOADER_free(loader_register);
+}
+
+/******************************************************************************
+ *
+ *  Functions to list STORE loaders
+ *
+ *****/
+IMPLEMENT_LHASH_DOALL_ARG_CONST(STORE_LOADER, void);
+int STORE_do_all_loaders(void (*do_function) (const STORE_LOADER *loader,
+                                              void *do_arg),
+                         void *do_arg)
+{
+    lh_STORE_LOADER_doall_void(loader_register, do_function, do_arg);
+    return 1;
 }
