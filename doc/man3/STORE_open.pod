@@ -1,0 +1,102 @@
+=pod
+
+=head1 NAME
+
+STORE_CTX, STORE_open_file, STORE_open, STORE_load, STORE_eof,
+STORE_close - Types and functions to read objects from a URI
+
+=head1 SYNOPSIS
+
+ #include <openssl/store.h>
+ 
+ typedef struct store_ctx_st STORE_CTX;
+
+ STORE_CTX *STORE_open_file(const char *path, const UI_METHOD *ui_method,
+                            void *ui_data);
+ STORE_CTX *STORE_open(const char *uri, pem_password_cb *pw_callback,
+                       void *pw_callback_data);
+ STORE_INFO *STORE_load(STORE_CTX *ctx);
+ int STORE_eof(STORE_CTX *ctx);
+ int STORE_close(STORE_CTX *ctx);
+
+=head1 DESCRIPTION
+
+These functions help the application to fetch supported objects (see
+L<STORE_INFO(3)/SUPPORTED OBJECTS> for information on which those are)
+from a given URI (see L</SUPPORTED SCHEMES> for more information on
+the supported URI schemes).
+The general method to do so is to "open" the URI using STORE_open(),
+read each available and supported object using STORE_load() as long as
+STORE_eof() hasn't been reached, and finish it off with STORE_close().
+
+The retrieved information is store in a B<STORE_INFO>, which is further
+described in L<STORE_INFO(3)>.
+
+=head2 Types
+
+B<STORE_CTX> is a context variable that holds all the internal
+information for STORE_open(), STORE_load(), STORE_eof() and
+STORE_close() to work together.
+
+=head2 Functions
+
+STORE_open_file() takes a file path B<path> and the same password
+callback and associated data as B<pw_callback> and
+B<pw_callback_data>, opens it and returns a B<STORE_CTX>
+with all necessary information.
+The given B<pw_callback> and B<pw_callback_data> will be reused by all
+functions that use B<STORE_CTX> when a password is needed.
+This is STORE_open()'s little brother to handle cases where the file
+name has characters that aren't acceptable in a URI, such as the
+backslash used in Windows paths.
+
+STORE_open() takes a URI B<uri> and the same password callback and
+associated data as B<pw_callback> and B<pw_callback_data>, opens a
+channel to the data located at that URI and returns a B<STORE_CTX>
+with all necessary information.  The given B<pw_callback> and
+B<pw_callback_data> will be reused by all functions that use
+B<STORE_CTX> when a password is needed.
+
+STORE_eof() takes a B<STORE_CTX> and checks if we've reached the end
+of data.
+
+STORE_load() takes a B<STORE_CTX>, tries to load the next available
+object and return it wrapped with  B<STORE_INFO>.
+
+STORE_close() takes a B<STORE_CTX>, closes the channel that was opened
+by STORE_open() and frees all other information that was stored in the
+B<STORE_CTX>, as well as the B<STORE_CTX> itself.
+
+=head1 SUPPORTED SCHEMES
+
+The basic supported scheme is B<file:>.
+Any other scheme can be added dynamically, using
+STORE_register_loader().
+
+=head1 RETURN VALUES
+
+STORE_open() returns a pointer to a B<STORE_CTX> on success, B<NULL>
+on failure.
+
+STORE_load() returns a pointer to a B<STORE_INFO> on success, B<NULL>
+on failure.
+
+STORE_eof() returns 1 if the end of data has been reached, otherwise
+0.
+
+STORE_close() returns 1 on success, 0 on failure.
+
+=head1 SEE ALSO
+
+L<STORE_INFO(3)>, L<STORE_register_loader(3)>
+
+=head1 COPYRIGHT
+
+Copyright 2016 The OpenSSL Project Authors. All Rights Reserved.
+
+Licensed under the OpenSSL license (the "License").  You may not use
+this file except in compliance with the License.  You can obtain a copy
+in the file LICENSE in the source distribution or at
+L<https://www.openssl.org/source/license.html>.
+
+=cut
