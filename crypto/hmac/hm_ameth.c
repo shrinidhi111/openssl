@@ -12,7 +12,9 @@
 #include <openssl/evp.h>
 #include "internal/asn1_int.h"
 
-#define HMAC_TEST_PRIVATE_KEY_FORMAT
+#if 0
+# define HMAC_TEST_PRIVATE_KEY_FORMAT
+#endif
 
 /*
  * HMAC "ASN1" method. This is just here to indicate the maximum HMAC output
