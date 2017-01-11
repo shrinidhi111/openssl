@@ -1,0 +1,2 @@
+LIBS=../../libcrypto
+SOURCE[../../libcrypto]=ossl-siphash.c
