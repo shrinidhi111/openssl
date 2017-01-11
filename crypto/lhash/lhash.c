@@ -328,6 +328,26 @@ unsigned long OPENSSL_LH_strhash(const char *c)
     return ((ret >> 16) ^ ret);
 }
 
+unsigned long OPENSSL_LH_strhash_ex(const char *c, size_t len)
+{
+    unsigned long ret = 0;
+    long n;
+    unsigned long v;
+    int r;
+
+    n = 0x100;
+    while (len-- > 0) {
+        v = n | (*c);
+        n += 0x100;
+        r = (int)((v >> 2) ^ v) & 0x0f;
+        ret = (ret << r) | (ret >> (32 - r));
+        ret &= 0xFFFFFFFFL;
+        ret ^= v * v;
+        c++;
+    }
+    return ((ret >> 16) ^ ret);
+}
+
 unsigned long OPENSSL_LH_num_items(const OPENSSL_LHASH *lh)
 {
     return lh ? lh->num_items : 0;

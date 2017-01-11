@@ -78,6 +78,7 @@ void *OPENSSL_LH_retrieve(OPENSSL_LHASH *lh, const void *data);
 void OPENSSL_LH_doall(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNC func);
 void OPENSSL_LH_doall_arg(OPENSSL_LHASH *lh, OPENSSL_LH_DOALL_FUNCARG func, void *arg);
 unsigned long OPENSSL_LH_strhash(const char *c);
+unsigned long OPENSSL_LH_strhash_ex(const char *c, size_t len);
 unsigned long OPENSSL_LH_num_items(const OPENSSL_LHASH *lh);
 unsigned long OPENSSL_LH_get_down_load(const OPENSSL_LHASH *lh);
 void OPENSSL_LH_set_down_load(OPENSSL_LHASH *lh, unsigned long down_load);
