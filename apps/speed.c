@@ -110,6 +110,8 @@
 # include <openssl/ec.h>
 #endif
 #include <openssl/modes.h>
+#include <openssl/lhash.h>
+#include <openssl/siphash.h>
 
 #ifndef HAVE_FORK
 # if defined(OPENSSL_SYS_VMS) || defined(OPENSSL_SYS_WINDOWS)
@@ -129,7 +131,7 @@
 #define BUFSIZE (1024*16+1)
 #define MAX_MISALIGNMENT 63
 
-#define ALGOR_NUM       30
+#define ALGOR_NUM       32
 #define SIZE_NUM        6
 #define PRIME_NUM       3
 #define RSA_NUM         7
@@ -240,7 +242,8 @@ static const char *names[ALGOR_NUM] = {
     "aes-128 cbc", "aes-192 cbc", "aes-256 cbc",
     "camellia-128 cbc", "camellia-192 cbc", "camellia-256 cbc",
     "evp", "sha256", "sha512", "whirlpool",
-    "aes-128 ige", "aes-192 ige", "aes-256 ige", "ghash"
+    "aes-128 ige", "aes-192 ige", "aes-256 ige", "ghash",
+    "lhash", "siphash"
 };
 
 static double results[ALGOR_NUM][SIZE_NUM];
@@ -414,6 +417,8 @@ const OPTIONS speed_options[] = {
 #define D_IGE_192_AES   27
 #define D_IGE_256_AES   28
 #define D_GHASH         29
+#define D_LHASH         30
+#define D_SIPHASH       31
 static OPT_PAIR doit_choices[] = {
 #ifndef OPENSSL_NO_MD2
     {"md2", D_MD2},
@@ -479,6 +484,8 @@ static OPT_PAIR doit_choices[] = {
     {"cast5", D_CBC_CAST},
 #endif
     {"ghash", D_GHASH},
+    {"lhash", D_LHASH},
+    {"siphash", D_SIPHASH},
     {NULL}
 };
 
@@ -849,6 +856,29 @@ static int CRYPTO_gcm128_aad_loop(void *args)
     int count;
     for (count = 0; COND(c[D_GHASH][testnum]); count++)
         CRYPTO_gcm128_aad(gcm_ctx, buf, lengths[testnum]);
+    return count;
+}
+
+static int lhash_loop(void *args)
+{
+    loopargs_t *tempargs = *(loopargs_t **) args;
+    unsigned char *buf = tempargs->buf;
+    int count;
+    for (count = 0; COND(c[D_LHASH][testnum]); count++)
+        (void)OPENSSL_LH_strhash_ex((char *)buf, lengths[testnum]);
+    return count;
+}
+
+static int siphash_loop(void *args)
+{
+    loopargs_t *tempargs = *(loopargs_t **) args;
+    unsigned char *buf = tempargs->buf;
+    unsigned long result;
+    int count;
+    for (count = 0; COND(c[D_SIPHASH][testnum]); count++)
+        result = siphash(buf, lengths[testnum],
+                         (const uint8_t *)"0123456789ABCDEF",
+                         (uint8_t *)&result, sizeof(result));
     return count;
 }
 
@@ -1674,6 +1704,8 @@ int speed_main(int argc, char **argv)
     c[D_IGE_192_AES][0] = count;
     c[D_IGE_256_AES][0] = count;
     c[D_GHASH][0] = count;
+    c[D_LHASH][0] = count;
+    c[D_SIPHASH][0] = count;
 
     for (i = 1; i < SIZE_NUM; i++) {
         long l0, l1;
@@ -1692,6 +1724,8 @@ int speed_main(int argc, char **argv)
         c[D_SHA512][i] = c[D_SHA512][0] * 4 * l0 / l1;
         c[D_WHIRLPOOL][i] = c[D_WHIRLPOOL][0] * 4 * l0 / l1;
         c[D_GHASH][i] = c[D_GHASH][0] * 4 * l0 / l1;
+        c[D_LHASH][i] = c[D_LHASH][0] * 4 * l0 / l1;
+        c[D_SIPHASH][i] = c[D_SIPHASH][0] * 4 * l0 / l1;
 
         l0 = (long)lengths[i - 1];
 
@@ -2085,6 +2119,27 @@ int speed_main(int argc, char **argv)
         for (i = 0; i < loopargs_len; i++)
             CRYPTO_gcm128_release(loopargs[i].gcm_ctx);
     }
+
+    if (doit[D_LHASH]) {
+        for (testnum = 0; testnum < SIZE_NUM; testnum++) {
+            print_message(names[D_LHASH], c[D_LHASH][testnum], lengths[testnum]);
+            Time_F(START);
+            count = run_benchmark(async_jobs, lhash_loop, loopargs);
+            d = Time_F(STOP);
+            print_result(D_LHASH, testnum, count, d);
+        }
+    }
+
+    if (doit[D_SIPHASH]) {
+        for (testnum = 0; testnum < SIZE_NUM; testnum++) {
+            print_message(names[D_SIPHASH], c[D_SIPHASH][testnum], lengths[testnum]);
+            Time_F(START);
+            count = run_benchmark(async_jobs, siphash_loop, loopargs);
+            d = Time_F(STOP);
+            print_result(D_SIPHASH, testnum, count, d);
+        }
+    }
+
 #ifndef OPENSSL_NO_CAMELLIA
     if (doit[D_CBC_128_CML]) {
         if (async_jobs > 0) {
