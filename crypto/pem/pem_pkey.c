@@ -86,40 +86,37 @@ int PEM_write_bio_PrivateKey_traditional(BIO *bp, EVP_PKEY *x,
 
 EVP_PKEY *PEM_read_bio_Parameters(BIO *bp, EVP_PKEY **x)
 {
-    char *nm = NULL;
-    const unsigned char *p = NULL;
-    unsigned char *data = NULL;
-    long len;
-    int slen;
     EVP_PKEY *ret = NULL;
+    STORE_INFO *info = NULL;
+    UI_METHOD *ui_method = NULL;
 
-    if (!PEM_bytes_read_bio(&data, &len, &nm, PEM_STRING_PARAMETERS,
-                            bp, 0, NULL))
-        return NULL;
-    p = data;
-
-    if ((slen = pem_check_suffix(nm, "PARAMETERS")) > 0) {
-        ret = EVP_PKEY_new();
-        if (ret == NULL)
-            goto err;
-        if (!EVP_PKEY_set_type_str(ret, nm, slen)
-            || !ret->ameth->param_decode
-            || !ret->ameth->param_decode(ret, &p, len)) {
-            EVP_PKEY_free(ret);
-            ret = NULL;
-            goto err;
+    ERR_set_mark();
+    for (;;) {
+        if ((info = store_file_decode_pem_bio(bp, UI_null(), NULL)) == NULL) {
+            if (ERR_GET_REASON(ERR_peek_error()) == PEM_R_NO_START_LINE) {
+                ERR_add_error_data(2, "Expecting: ", PEM_STRING_PARAMETERS);
+                goto err;
+            }
+            if (!BIO_eof(bp))
+                continue;
         }
-        if (x) {
-            EVP_PKEY_free((EVP_PKEY *)*x);
-            *x = ret;
-        }
+        if (STORE_INFO_get_type(info) == STORE_INFO_PARAMS)
+            break;
+        STORE_INFO_free(info);
     }
+    if ((ret = STORE_INFO_get0_PARAMS(info)) != NULL
+        && x != NULL) {
+        *x = ret;
+        ERR_pop_to_mark();
+    }
+
  err:
-    if (ret == NULL)
-        PEMerr(PEM_F_PEM_READ_BIO_PARAMETERS, ERR_R_ASN1_LIB);
-    OPENSSL_free(nm);
-    OPENSSL_free(data);
-    return (ret);
+    UI_destroy_method(ui_method);
+    if (ret != NULL)
+        OPENSSL_free(info);
+    else
+        STORE_INFO_free(info);
+    return ret;
 }
 
 int PEM_write_bio_Parameters(BIO *bp, EVP_PKEY *x)
