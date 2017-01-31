@@ -1,0 +1,10 @@
+# Currently broken
+IF[0]
+
+IF[{- !$disabled{saw} -}]
+  PROOF_FORMULAS = chacha
+ENDIF
+SOURCE[chacha] = chacha-wrap.c ../../crypto/chacha/chacha_enc.c
+INCLUDE[chacha] = ../../crypto/include
+
+ENDIF

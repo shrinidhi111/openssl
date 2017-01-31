@@ -1,0 +1,7 @@
+IF[{- !$disabled{saw} -}]
+  PROOF_FORMULAS = aes128enc aes256enc aes128dec aes256dec
+ENDIF
+SOURCE[aes128enc] = aes128enc-wrap.c ../../crypto/aes/aes_core.c
+SOURCE[aes256enc] = aes256enc-wrap.c ../../crypto/aes/aes_core.c
+SOURCE[aes128dec] = aes128dec-wrap.c ../../crypto/aes/aes_core.c
+SOURCE[aes256dec] = aes256dec-wrap.c ../../crypto/aes/aes_core.c

@@ -1,0 +1,13 @@
+# Currently broken
+IF[0]
+
+IF[{- !$disabled{saw} -}]
+  PROOF_FORMULAS = sha1
+  PROOF_FORMULAS = sha256
+ENDIF
+SOURCE[sha1] = sha1-wrap.c \
+        ../../crypto/sha/sha1_one.c ../../crypto/sha/sha1dgst.c
+SOURCE[sha256] = sha256-wrap.c ../../crypto/sha/sha256.c
+INCLUDE[sha256] = ../../crypto/include
+
+ENDIF
