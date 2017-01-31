@@ -306,7 +306,7 @@ my $default_ranlib;
 $config{fips}=0;
 
 # Top level directories to build
-$config{dirs} = [ "crypto", "ssl", "engines", "apps", "test", "util", "tools", "fuzz" ];
+$config{dirs} = [ "crypto", "ssl", "engines", "apps", "test", "util", "tools", "fuzz", "proof" ];
 # crypto/ subdirectories to build
 $config{sdirs} = [
     "objects",
@@ -319,6 +319,8 @@ $config{sdirs} = [
     ];
 # test/ subdirectories to build
 $config{tdirs} = [ "ossl_shim" ];
+# proof/ subdirectories to build
+$config{pdirs} = [ "aes", "chacha", "sha" ];
 
 # Known TLS and DTLS protocols
 my @tls = qw(ssl3 tls1 tls1_1 tls1_2 tls1_3);
@@ -1317,7 +1319,6 @@ unless ($disabled{saw})
         # Disable optimisation until SAW can handle it
 	$config{cflags} =~ s/-O\S*//g;
 	$target{cflags} =~ s/-O\S*//g;
-	$config{cflags} .= " -emit-llvm ";
 	}
 
 # ALL MODIFICATIONS TO %config and %target MUST BE DONE FROM HERE ON
@@ -1444,6 +1445,10 @@ if ($builder eq "unified") {
     foreach (@{$config{tdirs}}) {
         push @build_infos, [ catdir("test", $_), "build.info" ]
             if (-f catfile($srcdir, "test", $_, "build.info"));
+    }
+    foreach (@{$config{pdirs}}) {
+        push @build_infos, [ catdir("proof", $_), "build.info" ]
+            if (-f catfile($srcdir, "proof", $_, "build.info"));
     }
 
     $config{build_infos} = [ ];
