@@ -8,7 +8,7 @@
 
 use File::Spec;
 use MIME::Base64;
-use OpenSSL::Test qw(:DEFAULT srctop_file bldtop_file data_file);
+use OpenSSL::Test qw(:DEFAULT srctop_file srctop_dir bldtop_file data_file);
 
 my $test_name = "test_store";
 setup($test_name);
@@ -59,7 +59,8 @@ my @generated_files =
 
 my $n = (2 * scalar @noexist_files)
     + (2 * scalar @src_files)
-    + scalar @generated_files;
+    + scalar @generated_files
+    + 2;
 
 plan tests => $n;
 
@@ -101,6 +102,21 @@ indir "store_$$" => sub {
         foreach (@generated_files) {
             ok(run(app(["openssl", "storeutl", "-passin", "pass:password",
                         $_])));
+        }
+        {
+            my $origdir = srctop_dir("test", "certs");
+            ok(run(app(["openssl", "storeutl", $origdir])));
+
+            # Make the directory into a URI and try again
+            my ($vol, $dir, $file) = File::Spec->splitpath($origdir, 1);
+            my @dirs = File::Spec->splitdir($dir);
+            $vol =~ s|:||g;
+            unshift @dirs, "/", $vol
+                if $vol ne '';
+            $dir = "file:"
+                . File::Spec::Unix->catpath('', File::Spec::Unix->catdir(@dirs),
+                                            '');
+            ok(run(app(["openssl", "storeutl", $dir])));
         }
     }
 }, create => 1, cleanup => 1;
