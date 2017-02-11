@@ -60,7 +60,8 @@ my @generated_files =
 my $n = (2 * scalar @noexist_files)
     + (2 * scalar @src_files)
     + (3 * scalar @generated_files)
-    + 2;
+    + 2
+    + 4;
 
 plan tests => $n;
 
@@ -92,6 +93,20 @@ indir "store_$$" => sub {
             ok(run(app(["openssl", "storeutl", $dir])));
             ok(run(app(["openssl", "storeutl", to_file_uri($dir, 1)])));
         }
+
+        ok(run(app(['openssl', 'storeutl', '-certs',
+                    srctop_file('test', 'testx509.pem')])),
+           "Checking that -certs returns 1 object on a certificate file");
+        ok(run(app(['openssl', 'storeutl', '-certs',
+                     srctop_file('test', 'testcrl.pem')])),
+           "Checking that -certs returns 0 objects on a CRL file");
+
+        ok(run(app(['openssl', 'storeutl', '-crls',
+                     srctop_file('test', 'testx509.pem')])),
+           "Checking that -crls returns 0 objects on a certificate file");
+        ok(run(app(['openssl', 'storeutl', '-crls',
+                    srctop_file('test', 'testcrl.pem')])),
+           "Checking that -crls returns 1 object on a CRL file");
     }
 }, create => 1, cleanup => 1;
 
