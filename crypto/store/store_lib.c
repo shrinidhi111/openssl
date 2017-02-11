@@ -10,6 +10,10 @@
 #include "e_os.h"
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+
+#include "e_os.h"
+
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/store.h>
@@ -24,6 +28,7 @@ struct ossl_store_ctx_st {
     void *ui_data;
     OSSL_STORE_post_process_info_fn post_process;
     void *post_process_data;
+    int expected_type;
 
     /* 0 before the first STORE_load(), 1 otherwise */
     int loading;
@@ -122,6 +127,20 @@ int OSSL_STORE_ctrl(OSSL_STORE_CTX *ctx, int cmd, ...)
     return ret;
 }
 
+int OSSL_STORE_expect(OSSL_STORE_CTX *ctx, int expected_type)
+{
+    if (ctx->loading) {
+        OSSL_STOREerr(OSSL_STORE_F_OSSL_STORE_EXPECT,
+                      OSSL_STORE_R_LOADING_STARTED);
+        return 0;
+    }
+
+    ctx->expected_type = expected_type;
+    if (ctx->loader->expect != NULL)
+        return ctx->loader->expect(ctx->loader_ctx, expected_type);
+    return 1;
+}
+
 OSSL_STORE_INFO *OSSL_STORE_load(OSSL_STORE_CTX *ctx)
 {
     OSSL_STORE_INFO *v = NULL;
@@ -142,6 +161,24 @@ OSSL_STORE_INFO *OSSL_STORE_load(OSSL_STORE_CTX *ctx)
          */
         if (v == NULL)
             goto again;
+    }
+
+    if (v != NULL && ctx->expected_type != 0) {
+        int returned_type = OSSL_STORE_INFO_get_type(v);
+
+        if (returned_type != OSSL_STORE_INFO_NAME && returned_type != 0) {
+            /*
+             * Soft assert here so those who want to harsly weed out faulty
+             * loaders can do so using a debugging version of libcrypto.
+             */
+            if (ctx->loader->expect != NULL)
+                assert(ctx->expected_type == returned_type);
+
+            if (ctx->expected_type != returned_type) {
+                OSSL_STORE_INFO_free(v);
+                goto again;
+            }
+        }
     }
 
     return v;

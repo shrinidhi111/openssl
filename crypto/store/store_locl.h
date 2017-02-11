@@ -75,6 +75,7 @@ struct ossl_store_loader_st {
     ENGINE *engine;
     OSSL_STORE_open_fn open;
     OSSL_STORE_ctrl_fn ctrl;
+    OSSL_STORE_expect_fn expect;
     OSSL_STORE_load_fn load;
     OSSL_STORE_eof_fn eof;
     OSSL_STORE_error_fn error;
