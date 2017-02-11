@@ -53,6 +53,13 @@ int STORE_LOADER_set_open(STORE_LOADER *loader,
     return 1;
 }
 
+int STORE_LOADER_set_expect(STORE_LOADER *loader,
+                            STORE_expect_fn store_expect_function)
+{
+    loader->expect = store_expect_function;
+    return 1;
+}
+
 int STORE_LOADER_set_load(STORE_LOADER *loader,
                           STORE_load_fn store_load_function)
 {

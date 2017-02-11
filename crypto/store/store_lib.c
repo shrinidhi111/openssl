@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>
@@ -24,6 +25,7 @@ struct store_ctx_st {
     void *ui_data;
     STORE_post_process_info_fn post_process;
     void *post_process_data;
+    enum STORE_INFO_types expected_type;
 
     /* 0 before the first STORE_load(), 1 otherwise */
     int loading;
@@ -105,6 +107,19 @@ STORE_CTX *STORE_open(const char *uri, const UI_METHOD *ui_method,
     return ctx;
 }
 
+int STORE_expect(STORE_CTX *ctx, enum STORE_INFO_types expected_type)
+{
+    if (ctx->loading) {
+        STOREerr(STORE_F_STORE_EXPECT, STORE_R_LOADING_STARTED);
+        return 0;
+    }
+
+    ctx->expected_type = expected_type;
+    if (ctx->loader->expect != NULL)
+        return ctx->loader->expect(ctx->loader_ctx, expected_type);
+    return 1;
+}
+
 STORE_INFO *STORE_load(STORE_CTX *ctx)
 {
     STORE_INFO *v = NULL;
@@ -122,6 +137,25 @@ STORE_INFO *STORE_load(STORE_CTX *ctx)
          */
         if (v == NULL)
             goto again;
+    }
+
+    if (v != NULL && ctx->expected_type != STORE_INFO_UNSPECIFIED) {
+        enum STORE_INFO_types returned_type = STORE_INFO_get_type(v);
+
+        if (returned_type != STORE_INFO_NAME
+            && returned_type != STORE_INFO_UNSPECIFIED) {
+            /*
+             * Soft assert here so those who want to harsly weed out faulty
+             * loaders can do so using a debugging version of libcrypto.
+             */
+            if (ctx->loader->expect != NULL)
+                assert(ctx->expected_type == returned_type);
+
+            if (ctx->expected_type != returned_type) {
+                STORE_INFO_free(v);
+                goto again;
+            }
+        }
     }
 
     return v;

@@ -138,6 +138,12 @@ const char *STORE_INFO_type_string(int type);
  */
 void STORE_INFO_free(STORE_INFO *store_info);
 
+/*
+ * Add expected return type (which can be unspecified) to the loading channel.
+ *  This MUST happen before the first STORE_load().
+ */
+int STORE_expect(STORE_CTX *ctx, enum STORE_INFO_types expected_type);
+
 
 /******************************************************************************
  *
@@ -161,6 +167,10 @@ typedef STORE_LOADER_CTX *(*STORE_open_fn)(const char *scheme,
                                            const char *fragment);
 int STORE_LOADER_set_open(STORE_LOADER *store_loader,
                           STORE_open_fn store_open_function);
+typedef int (*STORE_expect_fn)(STORE_LOADER_CTX *ctx,
+                               enum STORE_INFO_types expected);
+int STORE_LOADER_set_expect(STORE_LOADER *store_loader,
+                          STORE_expect_fn store_expect_function);
 typedef STORE_INFO *(*STORE_load_fn)(STORE_LOADER_CTX *ctx,
                                      const UI_METHOD *ui_method, void *ui_data);
 int STORE_LOADER_set_load(STORE_LOADER *store_loader,
@@ -176,6 +186,7 @@ int STORE_LOADER_free(STORE_LOADER *store_loader);
 int STORE_register_loader(STORE_LOADER *loader);
 STORE_LOADER *STORE_unregister_loader(const char *scheme);
 
+
 /******************************************************************************
  *
  *  Functions to list STORE loaders
@@ -184,7 +195,6 @@ STORE_LOADER *STORE_unregister_loader(const char *scheme);
 int STORE_do_all_loaders(void (*do_function) (const STORE_LOADER *loader,
                                               void *do_arg),
                          void *do_arg);
-
 
 /*****************************************************************************/
 
@@ -204,6 +214,7 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_FILE_LOAD_TRY_DECODE                     116
 # define STORE_F_FILE_NAME_TO_URI                         118
 # define STORE_F_FILE_OPEN                                112
+# define STORE_F_STORE_EXPECT                             124
 # define STORE_F_STORE_INFO_NEW_CERT                      100
 # define STORE_F_STORE_INFO_NEW_CRL                       101
 # define STORE_F_STORE_INFO_NEW_DECODED                   115
@@ -224,6 +235,7 @@ int ERR_load_STORE_strings(void);
 # define STORE_R_BAD_PASSWORD_READ                        110
 # define STORE_R_ERROR_VERIFYING_PKCS12_MAC               108
 # define STORE_R_IS_NOT_A                                 107
+# define STORE_R_LOADING_STARTED                          111
 # define STORE_R_PASSPHRASE_CALLBACK_ERROR                109
 # define STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED      102
 # define STORE_R_UNREGISTERED_SCHEME                      100
