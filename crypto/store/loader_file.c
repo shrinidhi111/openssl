@@ -160,6 +160,107 @@ typedef struct store_file_handler_st {
     int repeatable;
 } STORE_FILE_HANDLER;
 
+static STORE_INFO *try_decode_PKCS12(const char *pem_name,
+                                     const char *pem_header,
+                                     const unsigned char *blob, size_t len,
+                                     void **pctx, const UI_METHOD *ui_method,
+                                     void *ui_data)
+{
+    STORE_INFO *store_info = NULL;
+    STACK_OF(STORE_INFO) *ctx = *pctx;
+
+    if (ctx == NULL) {
+        /* Initial parsing */
+        PKCS12 *p12;
+        int ok = 0;
+
+        if (pem_name != NULL)
+            /* No match, there is no PEM PKCS12 tag */
+            return NULL;
+
+        if ((p12 = d2i_PKCS12(NULL, &blob, len)) != NULL) {
+            char *pass = NULL;
+            char tpass[PEM_BUFSIZE];
+            EVP_PKEY *pkey = NULL;
+            X509 *cert = NULL;
+            STACK_OF(X509) *chain = NULL;
+
+            if (PKCS12_verify_mac(p12, "", 0)
+                || PKCS12_verify_mac(p12, NULL, 0))
+                pass = "";
+            else {
+                if ((pass = file_get_pass(ui_method, tpass, PEM_BUFSIZE,
+                                          "PKCS12 import password",
+                                          ui_data)) == NULL) {
+                    STOREerr(STORE_F_TRY_DECODE_PKCS12,
+                             STORE_R_PASSPHRASE_CALLBACK_ERROR);
+                    goto p12_end;
+                }
+                if (!PKCS12_verify_mac(p12, pass, strlen(pass))) {
+                    STOREerr(STORE_F_TRY_DECODE_PKCS12,
+                             STORE_R_ERROR_VERIFYING_PKCS12_MAC);
+                    goto p12_end;
+                }
+            }
+
+            if (PKCS12_parse(p12, pass, &pkey, &cert, &chain)) {
+                if ((ctx = sk_STORE_INFO_new_null()) != NULL
+                    && sk_STORE_INFO_push(ctx, STORE_INFO_new_PKEY(pkey)) != 0
+                    && sk_STORE_INFO_push(ctx, STORE_INFO_new_CERT(cert)) != 0
+                    && (ok = 1))
+                    while(sk_X509_num(chain) > 0) {
+                        X509 *ca = sk_X509_value(chain, 0);
+
+                        if (sk_STORE_INFO_push(ctx, STORE_INFO_new_CERT(ca))
+                            == 0) {
+                            ok = 0;
+                            break;
+                        }
+                        (void)sk_X509_shift(chain);
+                    }
+                if (!ok) {
+                    sk_STORE_INFO_pop_free(ctx, STORE_INFO_free);
+                    EVP_PKEY_free(pkey);
+                    X509_free(cert);
+                    sk_X509_pop_free(chain, X509_free);
+                    ctx = NULL;
+                }
+                *pctx = ctx;
+            }
+        }
+     p12_end:
+        PKCS12_free(p12);
+        if (!ok)
+            /* The caller takes care of destroying my ctx */
+            return NULL;
+    }
+
+    if (ctx != NULL)
+        store_info = sk_STORE_INFO_shift(ctx);
+
+    return store_info;
+}
+static int eof_PKCS12(void *ctx_)
+{
+    STACK_OF(STORE_INFO) *ctx = ctx_;
+
+    return ctx == NULL || sk_STORE_INFO_num(ctx) == 0;
+}
+static void destroy_ctx_PKCS12(void **pctx)
+{
+    STACK_OF(STORE_INFO) *ctx = *pctx;
+
+    sk_STORE_INFO_pop_free(ctx, STORE_INFO_free);
+    *pctx = NULL;
+}
+static STORE_FILE_HANDLER PKCS12_handler = {
+    "PKCS12",
+    try_decode_PKCS12,
+    eof_PKCS12,
+    destroy_ctx_PKCS12,
+    1                            /* repeatable */
+};
+
 int pem_check_suffix(const char *pem_str, const char *suffix);
 static STORE_INFO *try_decode_PrivateKey(const char *pem_name,
                                          const char *pem_header,
@@ -337,6 +438,7 @@ static STORE_FILE_HANDLER X509CRL_handler = {
 };
 
 static const STORE_FILE_HANDLER *file_handlers[] = {
+    &PKCS12_handler,
     &X509Certificate_handler,
     &X509CRL_handler,
     &params_handler,
