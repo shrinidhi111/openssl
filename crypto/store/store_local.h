@@ -72,6 +72,7 @@ struct store_loader_st {
     const char *scheme;
     ENGINE *engine;
     STORE_open_fn open;
+    STORE_expect_fn expect;
     STORE_load_fn load;
     STORE_eof_fn eof;
     STORE_close_fn close;

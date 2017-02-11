@@ -4284,3 +4284,5 @@ STORE_INFO_new_ENDOFDATA                4234	1_1_1	EXIST::FUNCTION:
 STORE_LOADER_get0_scheme                4235	1_1_1	EXIST::FUNCTION:
 STORE_do_all_loaders                    4236	1_1_1	EXIST::FUNCTION:
 STORE_LOADER_get0_engine                4237	1_1_1	EXIST::FUNCTION:
+STORE_LOADER_set_expect                 4238	1_1_1	EXIST::FUNCTION:
+STORE_expect                            4239	1_1_1	EXIST::FUNCTION:
