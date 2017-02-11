@@ -574,6 +574,9 @@ struct store_loader_ctx_st {
             int last_errno;
         } dir;
     } _;
+
+    /* Expected object type.  May be unspecified */
+    enum STORE_INFO_types expected_type;
 };
 
 static void STORE_LOADER_CTX_free(STORE_LOADER_CTX *ctx)
@@ -724,6 +727,12 @@ static STORE_LOADER_CTX *file_open(const char *scheme, const char *user,
  err:
     STORE_LOADER_CTX_free(ctx);
     return NULL;
+}
+
+static int file_expect(STORE_LOADER_CTX *ctx, enum STORE_INFO_types expected)
+{
+    ctx->expected_type = expected;
+    return 1;
 }
 
 static STORE_INFO *file_load_try_decode(STORE_LOADER_CTX *ctx,
@@ -1040,6 +1049,7 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
     } else {
         int matchcount = -1;
 
+     again:
         result = file_load_try_repeat(ctx, ui_method, ui_data);
         if (result != NULL)
             return result;
@@ -1072,6 +1082,13 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
         /* We bail out on ambiguity */
         if (matchcount > 1)
             return NULL;
+
+        if (result != NULL
+            && ctx->expected_type != STORE_INFO_UNSPECIFIED
+            && ctx->expected_type != STORE_INFO_get_type(result)) {
+            STORE_INFO_free(result);
+            goto again;
+        }
     }
 
     if (result == NULL)
@@ -1107,7 +1124,7 @@ static STORE_LOADER store_file_loader =
         "file",
         NULL,
         file_open,
-        NULL,
+        file_expect,
         file_load,
         file_eof,
         file_close
