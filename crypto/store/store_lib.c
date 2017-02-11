@@ -24,6 +24,9 @@ struct store_ctx_st {
     void *ui_data;
     STORE_post_process_info_fn post_process;
     void *post_process_data;
+
+    /* 0 before the first STORE_load(), 1 otherwise */
+    int loading;
 };
 
 static STORE_CTX *store_open_int(const char *used_scheme,
@@ -106,6 +109,7 @@ STORE_INFO *STORE_load(STORE_CTX *ctx)
 {
     STORE_INFO *v = NULL;
 
+    ctx->loading = 1;
  again:
     v = ctx->loader->load(ctx->loader_ctx, ctx->ui_method, ctx->ui_data);
 
