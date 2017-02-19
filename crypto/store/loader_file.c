@@ -1125,6 +1125,7 @@ static STORE_LOADER store_file_loader =
         NULL,
         file_open,
         file_expect,
+        NULL,
         file_load,
         file_eof,
         file_close

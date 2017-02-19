@@ -99,7 +99,7 @@ enum STORE_INFO_types {
     STORE_INFO_CERT,             /* X509 * */
     STORE_INFO_CRL               /* X509_CRL * */
 };
-/* Used to mark the end of data, see below */
+/* Used in object searches and to mark the end of data, see below */
 # define STORE_INFO_UNSPECIFIED  0
 
 /*
@@ -138,11 +138,53 @@ const char *STORE_INFO_type_string(int type);
  */
 void STORE_INFO_free(STORE_INFO *store_info);
 
+
+/******************************************************************************
+ *
+ *  Function to construct a search URI from a base URI and search criteria
+ *
+ *****/
+
+enum STORE_SEARCH_types {
+    STORE_SEARCH_BY_NAME = 1,    /* subject in certs, issuer in CRLs */
+    STORE_SEARCH_BY_ISSUER_SERIAL,
+    STORE_SEARCH_BY_KEY_FINGERPRINT,
+    STORE_SEARCH_BY_ALIAS
+};
+# define STORE_SEARCH_UNSPECIFIED  0
+
+/* To check what search types the scheme handler supports */
+int STORE_supports_search(STORE_CTX *ctx, enum STORE_SEARCH_types);
+
+/* Search term constructors */
 /*
- * Add expected return type (which can be unspecified) to the loading channel.
- *  This MUST happen before the first STORE_load().
+ * The input is considered to be owned by the caller, and must therefore
+ * remain present throughout the lifetime of the returned STORE_SEARCH
+ */
+STORE_SEARCH *STORE_SEARCH_by_name(X509_NAME *name);
+STORE_SEARCH *STORE_SEARCH_by_issuer_serial(X509_NAME *name,
+                                            const ASN1_INTEGER *serial);
+STORE_SEARCH *STORE_SEARCH_by_key_fingerprint(const unsigned char *bytes,
+                                              int len);
+STORE_SEARCH *STORE_SEARCH_by_alias(const char *alias);
+
+/* Search term destructor */
+void STORE_SEARCH_free(STORE_SEARCH *search);
+
+/* Search term accessors */
+enum STORE_SEARCH_types STORE_SEARCH_get_type(const STORE_SEARCH *criterium);
+X509_NAME *STORE_SEARCH_get0_name(STORE_SEARCH *criterium);
+const ASN1_INTEGER *STORE_SEARCH_get0_serial(const STORE_SEARCH *criterium);
+const unsigned char *STORE_SEARCH_get0_bytes(const STORE_SEARCH *criterium,
+                                             size_t *length);
+const char *STORE_SEARCH_get0_string(const STORE_SEARCH *criterium);
+
+/*
+ * Add search criterium and expected return type (which can be unspecified)
+ * to the loading channel.  This MUST happen before the first STORE_load().
  */
 int STORE_expect(STORE_CTX *ctx, enum STORE_INFO_types expected_type);
+int STORE_find(STORE_CTX *ctx, STORE_SEARCH *search);
 
 
 /******************************************************************************
@@ -174,6 +216,10 @@ typedef int (*STORE_expect_fn)(STORE_LOADER_CTX *ctx,
                                enum STORE_INFO_types expected);
 int STORE_LOADER_set_expect(STORE_LOADER *store_loader,
                           STORE_expect_fn store_expect_function);
+typedef int (*STORE_find_fn)(STORE_LOADER_CTX *ctx,
+                             STORE_SEARCH *criteria);
+int STORE_LOADER_set_find(STORE_LOADER *store_loader,
+                          STORE_find_fn store_find_function);
 typedef STORE_INFO *(*STORE_load_fn)(STORE_LOADER_CTX *ctx,
                                      const UI_METHOD *ui_method, void *ui_data);
 int STORE_LOADER_set_load(STORE_LOADER *store_loader,
@@ -218,6 +264,7 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_FILE_NAME_TO_URI                         118
 # define STORE_F_FILE_OPEN                                112
 # define STORE_F_STORE_EXPECT                             124
+# define STORE_F_STORE_FIND                               125
 # define STORE_F_STORE_INFO_NEW_CERT                      100
 # define STORE_F_STORE_INFO_NEW_CRL                       101
 # define STORE_F_STORE_INFO_NEW_DECODED                   115
@@ -229,6 +276,11 @@ int ERR_load_STORE_strings(void);
 # define STORE_F_STORE_LOADER_NEW                         106
 # define STORE_F_STORE_OPEN                               127
 # define STORE_F_STORE_OPEN_INT                           107
+# define STORE_F_STORE_SEARCH_BY_ALIAS                    119
+# define STORE_F_STORE_SEARCH_BY_ISSUER_SERIAL            120
+# define STORE_F_STORE_SEARCH_BY_KEY_FINGERPRINT          121
+# define STORE_F_STORE_SEARCH_BY_NAME                     126
+# define STORE_F_STORE_SUPPORTS_SEARCH                    123
 # define STORE_F_STORE_UNREGISTER_LOADER_INT              108
 # define STORE_F_TRY_DECODE_PARAMS                        113
 # define STORE_F_TRY_DECODE_PKCS12                        114
@@ -244,6 +296,7 @@ int ERR_load_STORE_strings(void);
 # define STORE_R_PATH_MUST_BE_ABSOLUTE                    107
 # define STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED      102
 # define STORE_R_UNREGISTERED_SCHEME                      100
+# define STORE_R_UNSUPPORED_OPERATION                     113
 # define STORE_R_UNSUPPORTED_CONTENT_TYPE                 103
 # define STORE_R_URI_AUTHORITY_UNSUPPORED                 104
 # define STORE_R_URI_FRAGMENT_UNSUPPORED                  105

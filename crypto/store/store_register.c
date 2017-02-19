@@ -60,6 +60,13 @@ int STORE_LOADER_set_expect(STORE_LOADER *loader,
     return 1;
 }
 
+int STORE_LOADER_set_find(STORE_LOADER *loader,
+                          STORE_find_fn store_find_function)
+{
+    loader->find = store_find_function;
+    return 1;
+}
+
 int STORE_LOADER_set_load(STORE_LOADER *loader,
                           STORE_load_fn store_load_function)
 {
