@@ -4265,3 +4265,16 @@ STORE_LOADER_get0_engine                4215	1_1_1	EXIST::FUNCTION:
 STORE_do_all_loaders                    4216	1_1_1	EXIST::FUNCTION:
 STORE_expect                            4217	1_1_1	EXIST::FUNCTION:
 STORE_LOADER_set_expect                 4218	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_get0_serial                4219	1_1_1	EXIST::FUNCTION:
+STORE_find                              4220	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_get0_name                  4221	1_1_1	EXIST::FUNCTION:
+STORE_LOADER_set_find                   4222	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_get0_bytes                 4223	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_get0_string                4224	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_by_alias                   4225	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_by_name                    4226	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_by_issuer_serial           4227	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_by_key_fingerprint         4228	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_get_type                   4229	1_1_1	EXIST::FUNCTION:
+STORE_supports_search                   4230	1_1_1	EXIST::FUNCTION:
+STORE_SEARCH_free                       4231	1_1_1	EXIST::FUNCTION:

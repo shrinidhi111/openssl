@@ -60,6 +60,26 @@ char *store_info_get0_DECODED_pem_name(STORE_INFO *store_info);
 
 /******************************************************************************
  *
+ * STORE_SEARCH stuff
+ *
+ *****/
+
+struct store_search_st {
+    enum STORE_SEARCH_types type;
+
+    /* Use by STORE_SEARCH_BY_NAME and STORE_SEARCH_BY_ISSUER_SERIAL */
+    X509_NAME *name;
+
+    /* Use by STORE_SEARCH_BY_ISSUER_SERIAL */
+    const ASN1_INTEGER *serial;
+
+    /* Use by STORE_SEARCH_BY_KEY_FINGERPRINT and STORE_SEARCH_BY_ALIAS */
+    const unsigned char *string;
+    size_t stringlength;
+};
+
+/******************************************************************************
+ *
  * STORE_LOADER stuff
  *
  *****/
@@ -73,6 +93,7 @@ struct store_loader_st {
     ENGINE *engine;
     STORE_open_fn open;
     STORE_expect_fn expect;
+    STORE_find_fn find;
     STORE_load_fn load;
     STORE_eof_fn eof;
     STORE_close_fn close;

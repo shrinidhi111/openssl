@@ -120,6 +120,20 @@ int STORE_expect(STORE_CTX *ctx, enum STORE_INFO_types expected_type)
     return 1;
 }
 
+int STORE_find(STORE_CTX *ctx, STORE_SEARCH *search)
+{
+    if (ctx->loading) {
+        STOREerr(STORE_F_STORE_FIND, STORE_R_LOADING_STARTED);
+        return 0;
+    }
+    if (ctx->loader->find == NULL) {
+        STOREerr(STORE_F_STORE_FIND, STORE_R_UNSUPPORED_OPERATION);
+        return 0;
+    }
+
+    return ctx->loader->find(ctx->loader_ctx, search);
+}
+
 STORE_INFO *STORE_load(STORE_CTX *ctx)
 {
     STORE_INFO *v = NULL;
@@ -320,6 +334,112 @@ void STORE_INFO_free(STORE_INFO *store_info)
         }
         OPENSSL_free(store_info);
     }
+}
+
+int STORE_supports_search(STORE_CTX *ctx, enum STORE_SEARCH_types type)
+{
+    STORE_SEARCH tmp_search;
+
+    if (ctx->loader->find == NULL)
+        return 0;
+    tmp_search.type = type;
+    return ctx->loader->find(NULL, &tmp_search);
+}
+
+/* Search term constructors */
+STORE_SEARCH *STORE_SEARCH_by_name(X509_NAME *name)
+{
+    STORE_SEARCH *search = OPENSSL_zalloc(sizeof(*search));
+
+    if (search == NULL) {
+        STOREerr(STORE_F_STORE_SEARCH_BY_NAME, ERR_R_MALLOC_FAILURE);
+        return NULL;
+    }
+
+    search->type = STORE_SEARCH_BY_NAME;
+    search->name = name;
+    return search;
+}
+
+STORE_SEARCH *STORE_SEARCH_by_issuer_serial(X509_NAME *name,
+                                            const ASN1_INTEGER *serial)
+{
+    STORE_SEARCH *search = OPENSSL_zalloc(sizeof(*search));
+
+    if (search == NULL) {
+        STOREerr(STORE_F_STORE_SEARCH_BY_ISSUER_SERIAL, ERR_R_MALLOC_FAILURE);
+        return NULL;
+    }
+
+    search->type = STORE_SEARCH_BY_ISSUER_SERIAL;
+    search->name = name;
+    search->serial = serial;
+    return search;
+}
+
+STORE_SEARCH *STORE_SEARCH_by_key_fingerprint(const unsigned char *bytes,
+                                              int len)
+{
+    STORE_SEARCH *search = OPENSSL_zalloc(sizeof(*search));
+
+    if (search == NULL) {
+        STOREerr(STORE_F_STORE_SEARCH_BY_KEY_FINGERPRINT, ERR_R_MALLOC_FAILURE);
+        return NULL;
+    }
+
+    search->type = STORE_SEARCH_BY_KEY_FINGERPRINT;
+    search->string = bytes;
+    search->stringlength = len;
+    return search;
+}
+
+STORE_SEARCH *STORE_SEARCH_by_alias(const char *alias)
+{
+    STORE_SEARCH *search = OPENSSL_zalloc(sizeof(*search));
+
+    if (search == NULL) {
+        STOREerr(STORE_F_STORE_SEARCH_BY_ALIAS, ERR_R_MALLOC_FAILURE);
+        return NULL;
+    }
+
+    search->type = STORE_SEARCH_BY_ALIAS;
+    search->string = (unsigned char *)alias;
+    search->stringlength = strlen(alias);
+    return search;
+}
+
+/* Search term destructor */
+void STORE_SEARCH_free(STORE_SEARCH *search)
+{
+    OPENSSL_free(search);
+}
+
+/* Search term accessors */
+enum STORE_SEARCH_types STORE_SEARCH_get_type(const STORE_SEARCH *criterium)
+{
+    return criterium->type;
+}
+
+X509_NAME *STORE_SEARCH_get0_name(STORE_SEARCH *criterium)
+{
+    return criterium->name;
+}
+
+const ASN1_INTEGER *STORE_SEARCH_get0_serial(const STORE_SEARCH *criterium)
+{
+    return criterium->serial;
+}
+
+const unsigned char *STORE_SEARCH_get0_bytes(const STORE_SEARCH *criterium,
+                                             size_t *length)
+{
+    *length = criterium->stringlength;
+    return criterium->string;
+}
+
+const char *STORE_SEARCH_get0_string(const STORE_SEARCH *criterium)
+{
+    return (const char *)criterium->string;
 }
 
 /* Internal functions */
