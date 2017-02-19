@@ -4503,3 +4503,16 @@ EVP_sha512_224                          4443	1_1_1	EXIST::FUNCTION:
 OCSP_basic_sign_ctx                     4444	1_1_1	EXIST::FUNCTION:OCSP
 OSSL_STORE_LOADER_set_expect            4445	1_1_1	EXIST::FUNCTION:
 OSSL_STORE_expect                       4446	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_by_key_fingerprint    4447	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_get0_serial           4448	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_by_name               4449	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_supports_search              4450	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_find                         4451	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_get_type              4452	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_get0_bytes            4453	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_get0_string           4454	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_by_issuer_serial      4455	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_get0_name             4456	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_by_alias              4457	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_LOADER_set_find              4458	1_1_1	EXIST::FUNCTION:
+OSSL_STORE_SEARCH_free                  4459	1_1_1	EXIST::FUNCTION:
