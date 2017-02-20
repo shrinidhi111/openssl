@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #include <openssl/bio.h>
 #include <openssl/dsa.h>         /* For d2i_DSAPrivateKey */
@@ -566,6 +567,13 @@ struct store_loader_ctx_st {
             char *fragment;
 
             /*
+             * When a search expression is given, these are filled in.
+             * |search_name| contains the file basename to look for.
+             * The string is exactly 8 characters long.
+             */
+            char search_name[9];
+
+            /*
              * The directory reading utility we have combines opening with
              * reading the first name.  To make sure we can detect the end
              * at the right time, we read early and cache the name.
@@ -733,6 +741,36 @@ static int file_expect(STORE_LOADER_CTX *ctx, enum STORE_INFO_types expected)
 {
     ctx->expected_type = expected;
     return 1;
+}
+
+static int file_find(STORE_LOADER_CTX *ctx, STORE_SEARCH *search)
+{
+    /*
+     * If ctx == NULL, the library is looking to know if this loader supports
+     * the given search type.
+     */
+
+    if (STORE_SEARCH_get_type(search) == STORE_SEARCH_BY_NAME) {
+        unsigned long hash = 0;
+
+        if (ctx == NULL)
+            return 1;
+
+        if (ctx->type != is_dir) {
+            STOREerr(STORE_F_FILE_FIND,
+                     STORE_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES);
+            return 0;
+        }
+
+        hash = X509_NAME_hash(STORE_SEARCH_get0_name(search));
+        BIO_snprintf(ctx->_.dir.search_name, sizeof(ctx->_.dir.search_name),
+                     "%08lx", hash);
+        return 1;
+    }
+
+    if (ctx != NULL)
+        STOREerr(STORE_F_FILE_FIND, STORE_R_UNSUPPORTED_SEARCH_TYPE);
+    return 0;
 }
 
 static STORE_INFO *file_load_try_decode(STORE_LOADER_CTX *ctx,
@@ -1006,6 +1044,49 @@ static int file_name_to_uri(STORE_LOADER_CTX *ctx, const char *name,
     return 1;
 }
 
+static int file_name_check(STORE_LOADER_CTX *ctx, const char *name)
+{
+    const char *p = NULL;
+
+    /* If there is no search criteria, all names are accepted */
+    if (ctx->_.dir.search_name[0] == '\0')
+        return 1;
+
+    /*
+     * First, check the basename
+     */
+    if (strncasecmp(name, ctx->_.dir.search_name,
+                    sizeof(ctx->_.dir.search_name) - 1) != 0
+        || name[sizeof(ctx->_.dir.search_name) - 1] != '.')
+        return 0;
+    p = &name[sizeof(ctx->_.dir.search_name)];
+
+    /*
+     * Then, if the expected type is a CRL, check that the extension starts
+     * with 'r'
+     */
+    if ((ctx->expected_type == STORE_INFO_UNSPECIFIED
+         || ctx->expected_type == STORE_INFO_CRL)
+        && *p++ != 'r')
+        return 0;
+
+    /*
+     * Last, check that the rest of the extension is a decimal number.
+     */
+    if (ctx->expected_type == STORE_INFO_UNSPECIFIED
+        || ctx->expected_type == STORE_INFO_CERT
+        || ctx->expected_type == STORE_INFO_CRL) {
+        while (isdigit(*p))
+            p++;
+        return *p == '\0';
+    }
+
+    /*
+     * No match, or the expected return type isn't supported => fail.
+     */
+    return 0;
+}
+
 static int file_eof(STORE_LOADER_CTX *ctx);
 static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
                              const UI_METHOD *ui_method,
@@ -1030,6 +1111,7 @@ static STORE_INFO *file_load(STORE_LOADER_CTX *ctx,
             }
 
             if (ctx->_.dir.last_entry[0] != '.'
+                && file_name_check(ctx, ctx->_.dir.last_entry)
                 && !file_name_to_uri(ctx, ctx->_.dir.last_entry, &newname))
                 return NULL;
 
@@ -1125,7 +1207,7 @@ static STORE_LOADER store_file_loader =
         NULL,
         file_open,
         file_expect,
-        NULL,
+        file_find,
         file_load,
         file_eof,
         file_close

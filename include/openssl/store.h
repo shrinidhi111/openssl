@@ -258,6 +258,7 @@ int ERR_load_STORE_strings(void);
 /* Error codes for the STORE functions. */
 
 /* Function codes. */
+# define STORE_F_FILE_FIND                                122
 # define STORE_F_FILE_GET_PASS                            110
 # define STORE_F_FILE_LOAD                                111
 # define STORE_F_FILE_LOAD_TRY_DECODE                     116
@@ -294,10 +295,12 @@ int ERR_load_STORE_strings(void);
 # define STORE_R_LOADING_STARTED                          112
 # define STORE_R_PASSPHRASE_CALLBACK_ERROR                110
 # define STORE_R_PATH_MUST_BE_ABSOLUTE                    107
+# define STORE_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES    114
 # define STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED      102
 # define STORE_R_UNREGISTERED_SCHEME                      100
 # define STORE_R_UNSUPPORED_OPERATION                     113
 # define STORE_R_UNSUPPORTED_CONTENT_TYPE                 103
+# define STORE_R_UNSUPPORTED_SEARCH_TYPE                  115
 # define STORE_R_URI_AUTHORITY_UNSUPPORED                 104
 # define STORE_R_URI_FRAGMENT_UNSUPPORED                  105
 # define STORE_R_URI_QUERY_UNSUPPORED                     106

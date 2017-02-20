@@ -19,6 +19,7 @@
 # define ERR_REASON(reason) ERR_PACK(ERR_LIB_STORE,0,reason)
 
 static ERR_STRING_DATA STORE_str_functs[] = {
+    {ERR_FUNC(STORE_F_FILE_FIND), "file_find"},
     {ERR_FUNC(STORE_F_FILE_GET_PASS), "file_get_pass"},
     {ERR_FUNC(STORE_F_FILE_LOAD), "file_load"},
     {ERR_FUNC(STORE_F_FILE_LOAD_TRY_DECODE), "file_load_try_decode"},
@@ -63,12 +64,15 @@ static ERR_STRING_DATA STORE_str_reasons[] = {
     {ERR_REASON(STORE_R_PASSPHRASE_CALLBACK_ERROR),
      "passphrase callback error"},
     {ERR_REASON(STORE_R_PATH_MUST_BE_ABSOLUTE), "path must be absolute"},
+    {ERR_REASON(STORE_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES),
+     "search only supported for directories"},
     {ERR_REASON(STORE_R_UI_PROCESS_INTERRUPTED_OR_CANCELLED),
      "ui process interrupted or cancelled"},
     {ERR_REASON(STORE_R_UNREGISTERED_SCHEME), "unregistered scheme"},
     {ERR_REASON(STORE_R_UNSUPPORED_OPERATION), "unsuppored operation"},
     {ERR_REASON(STORE_R_UNSUPPORTED_CONTENT_TYPE),
      "unsupported content type"},
+    {ERR_REASON(STORE_R_UNSUPPORTED_SEARCH_TYPE), "unsupported search type"},
     {ERR_REASON(STORE_R_URI_AUTHORITY_UNSUPPORED),
      "uri authority unsuppored"},
     {ERR_REASON(STORE_R_URI_FRAGMENT_UNSUPPORED), "uri fragment unsuppored"},
