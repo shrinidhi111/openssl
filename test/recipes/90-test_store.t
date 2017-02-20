@@ -6,7 +6,8 @@
 # in the file LICENSE in the source distribution or at
 # https://www.openssl.org/source/license.html
 
-use File::Spec;
+use File::Spec::Functions;
+use File::Copy;
 use MIME::Base64;
 use OpenSSL::Test qw(:DEFAULT srctop_file srctop_dir bldtop_file data_file);
 
@@ -61,7 +62,7 @@ my $n = (2 * scalar @noexist_files)
     + (2 * scalar @src_files)
     + (3 * scalar @generated_files)
     + 2
-    + 4;
+    + 11;
 
 plan tests => $n;
 
@@ -94,6 +95,11 @@ indir "store_$$" => sub {
             ok(run(app(["openssl", "storeutl", to_file_uri($dir, 1)])));
         }
 
+        ok(!run(app(['openssl', 'storeutl',
+                     '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                     srctop_file('test', 'testx509.pem')])),
+           "Checking that -subject can't be used with a single file");
+
         ok(run(app(['openssl', 'storeutl', '-certs',
                     srctop_file('test', 'testx509.pem')])),
            "Checking that -certs returns 1 object on a certificate file");
@@ -107,6 +113,32 @@ indir "store_$$" => sub {
         ok(run(app(['openssl', 'storeutl', '-crls',
                     srctop_file('test', 'testcrl.pem')])),
            "Checking that -crls returns 1 object on a CRL file");
+
+        # subject from testx509.pem:
+        # '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert'
+        # issuer from testcrl.pem:
+        # '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority'
+        ok(run(app(['openssl', 'storeutl',
+                    '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                    catdir(curdir(), 'rehash')])));
+        ok(run(app(['openssl', 'storeutl',
+                    '-subject',
+                    '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
+                    catdir(curdir(), 'rehash')])));
+        ok(run(app(['openssl', 'storeutl', '-certs',
+                    '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                    catdir(curdir(), 'rehash')])));
+        ok(run(app(['openssl', 'storeutl', '-crls',
+                    '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                    catdir(curdir(), 'rehash')])));
+        ok(run(app(['openssl', 'storeutl', '-certs',
+                    '-subject',
+                    '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
+                     catdir(curdir(), 'rehash')])));
+        ok(run(app(['openssl', 'storeutl', '-crls',
+                    '-subject',
+                    '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
+                    catdir(curdir(), 'rehash')])));
     }
 }, create => 1, cleanup => 1;
 
@@ -292,6 +324,12 @@ sub init {
                           close $outfh;
                           return 1;
                       }, grep(/\.der$/, @generated_files))
+            && mkdir(catdir(curdir(), 'rehash'))
+            && copy(srctop_file('test', 'testx509.pem'),
+                    catdir(curdir(), 'rehash'))
+            && copy(srctop_file('test', 'testcrl.pem'),
+                    catdir(curdir(), 'rehash'))
+            && run(app(['openssl', 'rehash', catdir(curdir(), 'rehash')]))
            );
 }
 
