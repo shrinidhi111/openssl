@@ -7,6 +7,7 @@
  * https://www.openssl.org/source/license.html
  */
 
+#include <openssl/store.h>
 #include "internal/refcount.h"
 
 /*
@@ -136,9 +137,13 @@ struct x509_store_st {
     CRYPTO_RWLOCK *lock;
 };
 
-typedef struct lookup_dir_hashes_st BY_DIR_HASH;
-typedef struct lookup_dir_entry_st BY_DIR_ENTRY;
-DEFINE_STACK_OF(BY_DIR_HASH)
-DEFINE_STACK_OF(BY_DIR_ENTRY)
 typedef STACK_OF(X509_NAME_ENTRY) STACK_OF_X509_NAME_ENTRY;
 DEFINE_STACK_OF(STACK_OF_X509_NAME_ENTRY)
+
+int x509_load_cert_crl_file_int(X509_LOOKUP *ctx, const char *file,
+                                enum STORE_INFO_types expected_result);
+
+DEFINE_STACK_OF(STORE_INFO)
+typedef struct lookup_dir_entry_st BY_DIR_ENTRY;
+DEFINE_STACK_OF(BY_DIR_ENTRY)
+typedef struct lookup_dir_st BY_DIR;
