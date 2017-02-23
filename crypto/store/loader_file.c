@@ -378,7 +378,7 @@ static STORE_LOADER_CTX *file_open(const char *scheme, const char *user,
 
 #ifdef _WIN32
     if (scheme != NULL) {        /* We only know the scheme "file" */
-        if (path[0] == '/' && path[2] == '/' && path[3] == '/')
+        if (path[0] == '/' && path[2] == ':' && path[3] == '/')
             path++;
     }
 #endif
