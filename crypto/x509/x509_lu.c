@@ -15,28 +15,126 @@
 #include <openssl/x509v3.h>
 #include "x509_lcl.h"
 
+static int x509_load_cert_crl_file_int(X509_LOOKUP *ctx, const char *file,
+                                       enum STORE_INFO_types expected_result)
+{
+    STORE_CTX *storectx = STORE_open_file(file, NULL, NULL, NULL, NULL);
+    STORE_INFO *info = NULL;
+    int ok = 0;
+
+    if (storectx == NULL) {
+        X509err(X509_F_X509_LOAD_CERT_CRL_FILE_INT, ERR_R_STORE_LIB);
+        return ok;
+    }
+
+    if (!STORE_expect(storectx, expected_result)) {
+        X509err(X509_F_X509_LOAD_CERT_CRL_FILE_INT, ERR_R_STORE_LIB);
+        return ok;
+    }
+
+    while ((info = STORE_load(storectx)) != NULL) {
+        /* Check for end of data */
+        if (STORE_INFO_get_type(info) == STORE_INFO_UNSPECIFIED)
+            break;
+
+        switch (STORE_INFO_get_type(info)) {
+        case STORE_INFO_CERT:
+            X509_STORE_add_cert(ctx->store_ctx, STORE_INFO_get0_CERT(info));
+            break;
+        case STORE_INFO_CRL:
+            X509_STORE_add_crl(ctx->store_ctx, STORE_INFO_get0_CRL(info));
+            break;
+        default:
+            /* Everything else is ignored */
+            break;
+        }
+        STORE_INFO_free(info);
+    }
+
+    if (info == NULL) {
+        X509err(X509_F_X509_LOAD_CERT_CRL_FILE_INT, ERR_R_STORE_LIB);
+        goto err;
+    }
+    /* Get rid of the end marker */
+    STORE_INFO_free(info);
+
+    ok = 1;
+ err:
+    STORE_close(storectx);
+    return ok;
+}
+
+int X509_load_cert_file(X509_LOOKUP *ctx, const char *file, int type)
+{
+    return x509_load_cert_crl_file_int(ctx, file, STORE_INFO_CERT);
+}
+
+int X509_load_crl_file(X509_LOOKUP *ctx, const char *file, int type)
+{
+    return x509_load_cert_crl_file_int(ctx, file, STORE_INFO_CRL);
+}
+
+int X509_load_cert_crl_file(X509_LOOKUP *ctx, const char *file, int type)
+{
+    /* In this case, STORE_INFO_UNSPECIFIED means certs and CRLs */
+    return x509_load_cert_crl_file_int(ctx, file, STORE_INFO_UNSPECIFIED);
+}
+
+static int loaded_entry_cmp(const LOADED_ENTRY *const *a,
+                            const LOADED_ENTRY *const *b)
+{
+    int ret = strcmp(STORE_INFO_get0_NAME((*a)->name),
+                     STORE_INFO_get0_NAME((*b)->name));
+
+    if (ret != 0)
+        return ret;
+
+    if ((*a)->type == (*b)->type)
+        return 0;
+    if ((*a)->type < (*b)->type)
+        return -1;
+    return 1;
+}
+
+
 X509_LOOKUP *X509_LOOKUP_new(X509_LOOKUP_METHOD *method)
 {
     X509_LOOKUP *ret;
 
-    ret = OPENSSL_zalloc(sizeof(*ret));
-    if (ret == NULL)
-        return NULL;
-
-    ret->method = method;
-    if ((method->new_item != NULL) && !method->new_item(ret)) {
+    if ((ret = OPENSSL_zalloc(sizeof(*ret))) == NULL
+        || (ret->locations = sk_LOCATION_new_null()) == NULL
+        || (ret->entries = sk_LOADED_ENTRY_new(loaded_entry_cmp)) == NULL
+        || (ret->lock = CRYPTO_THREAD_lock_new()) == NULL) {
+        if (ret != NULL) {
+            CRYPTO_THREAD_lock_free(ret->lock);
+            sk_LOADED_ENTRY_free(ret->entries);
+            sk_LOCATION_free(ret->locations);
+        }
         OPENSSL_free(ret);
         return NULL;
     }
     return ret;
 }
 
+static void loaded_entry_free(LOADED_ENTRY *ent)
+{
+    STORE_INFO_free(ent->name);
+    OPENSSL_free(ent);
+}
+
+static void location_free(LOCATION *loc)
+{
+    OPENSSL_free(loc->name);
+    OPENSSL_free(loc);
+}
+
 void X509_LOOKUP_free(X509_LOOKUP *ctx)
 {
     if (ctx == NULL)
         return;
-    if ((ctx->method != NULL) && (ctx->method->free != NULL))
-        (*ctx->method->free) (ctx);
+    sk_LOCATION_pop_free(ctx->locations, location_free);
+    sk_LOADED_ENTRY_pop_free(ctx->entries, loaded_entry_free);
+    CRYPTO_THREAD_lock_free(ctx->lock);
     OPENSSL_free(ctx);
 }
 
@@ -52,69 +150,365 @@ int X509_STORE_unlock(X509_STORE *s)
 
 int X509_LOOKUP_init(X509_LOOKUP *ctx)
 {
-    if (ctx->method == NULL)
-        return 0;
-    if (ctx->method->init != NULL)
-        return ctx->method->init(ctx);
-    else
-        return 1;
+    return 1;
 }
 
 int X509_LOOKUP_shutdown(X509_LOOKUP *ctx)
 {
-    if (ctx->method == NULL)
+    return 1;
+}
+
+static int add_locations(X509_LOOKUP *ctx, const char *locations, int type)
+{
+    const char *s, *p;
+
+    if (locations == NULL || !*locations) {
+        X509err(X509_F_ADD_LOCATIONS, X509_R_INVALID_LOCATIONS);
         return 0;
-    if (ctx->method->shutdown != NULL)
-        return ctx->method->shutdown(ctx);
-    else
-        return 1;
+    }
+
+    s = locations;
+    p = s;
+    do {
+        if ((*p == LIST_SEPARATOR_CHAR) || (*p == '\0')) {
+            LOCATION *loc;
+            int j;
+            size_t len;
+            const char *ss = s;
+
+            s = p + 1;
+            len = p - ss;
+            if (len == 0)
+                continue;
+
+            for (j = 0; j < sk_LOCATION_num(ctx->locations); j++) {
+                loc = sk_LOCATION_value(ctx->locations, j);
+                if (strlen(loc->name) == len &&
+                    strncmp(loc->name, ss, len) == 0)
+                    break;
+            }
+            if (j < sk_LOCATION_num(ctx->locations))
+                continue;
+
+            if ((loc = OPENSSL_malloc(sizeof(*loc))) == NULL
+                || (loc->name = OPENSSL_strndup(ss, len)) == NULL
+                || !sk_LOCATION_push(ctx->locations, loc)) {
+                if (loc != NULL)
+                    OPENSSL_free(loc->name);
+                OPENSSL_free(loc);
+                X509err(X509_F_ADD_LOCATIONS, ERR_R_MALLOC_FAILURE);
+                return 0;
+            }
+        }
+    } while (*p++ != '\0');
+    return 1;
 }
 
 int X509_LOOKUP_ctrl(X509_LOOKUP *ctx, int cmd, const char *argc, long argl,
                      char **ret)
 {
-    if (ctx->method == NULL)
-        return -1;
-    if (ctx->method->ctrl != NULL)
-        return ctx->method->ctrl(ctx, cmd, argc, argl, ret);
-    else
-        return 1;
+    int ok = 0;
+
+    switch (cmd) {
+    case X509_L_FILE_LOAD:
+        if (argl == X509_FILETYPE_DEFAULT) {
+            char *file = (char *)getenv(X509_get_default_cert_file_env());
+
+            if (file)
+                ok = (X509_load_cert_crl_file(ctx, file,
+                                              X509_FILETYPE_PEM) != 0);
+
+            else
+                ok = (X509_load_cert_crl_file
+                      (ctx, X509_get_default_cert_file(),
+                       X509_FILETYPE_PEM) != 0);
+
+            if (!ok) {
+                X509err(X509_F_X509_LOOKUP_CTRL, X509_R_LOADING_DEFAULTS);
+            }
+        } else {
+            if (argl == X509_FILETYPE_PEM)
+                ok = (X509_load_cert_crl_file(ctx, argc,
+                                              X509_FILETYPE_PEM) != 0);
+            else
+                ok = (X509_load_cert_file(ctx, argc, (int)argl) != 0);
+        }
+        break;
+    case X509_L_ADD_DIR:
+        if (argl == X509_FILETYPE_DEFAULT) {
+            char *dir = (char *)getenv(X509_get_default_cert_dir_env());
+
+            if (dir)
+                ok = add_locations(ctx, dir, X509_FILETYPE_PEM);
+            else
+                ok = add_locations(ctx, X509_get_default_cert_dir(),
+                                   X509_FILETYPE_PEM);
+            if (!ok) {
+                X509err(X509_F_X509_LOOKUP_CTRL, X509_R_LOADING_CERT_DIR);
+            }
+        } else
+            ok = add_locations(ctx, argc, (int)argl);
+        break;
+    }
+
+    return ok;
+}
+
+static int lookup_int(X509_LOOKUP *ctx, X509_LOOKUP_TYPE type,
+                      STORE_SEARCH *search, X509_OBJECT *ret)
+{
+    enum STORE_INFO_types expected_type = STORE_INFO_UNSPECIFIED;
+    int ok = 0;
+
+    switch (type) {
+    case X509_LU_X509:
+        expected_type = STORE_INFO_CERT;
+        break;
+    case X509_LU_CRL:
+        expected_type = STORE_INFO_CRL;
+        break;
+    default:
+        X509err(X509_F_LOOKUP_INT, X509_R_WRONG_LOOKUP_TYPE);
+        break;
+    }
+
+    if (expected_type != STORE_INFO_UNSPECIFIED) {
+        int i;
+        LOADED_ENTRY ltmp = { NULL, STORE_INFO_UNSPECIFIED };
+
+        for (i = 0; i < sk_LOCATION_num(ctx->locations); i++) {
+            LOCATION *location = sk_LOCATION_value(ctx->locations, i);
+            STORE_CTX *locctx = NULL;
+            int idx;
+
+            /* If the location is file, we may have already loaded it */
+            STORE_INFO_free(ltmp.name);
+            ltmp.name = STORE_INFO_new_NAME(OPENSSL_strdup(location->name));
+            ltmp.type = expected_type;
+            if (ltmp.name == NULL)
+                break;
+            CRYPTO_THREAD_read_lock(ctx->lock);
+            idx = sk_LOADED_ENTRY_find(ctx->entries, &ltmp);
+            CRYPTO_THREAD_unlock(ctx->lock);
+            if (idx >= 0) {
+                break;
+            }
+
+            locctx = STORE_open_file(location->name, NULL, NULL, NULL, NULL);
+
+            /* If there's an error, we simply ignore this directory */
+            if (locctx == NULL) {
+                ERR_clear_error();
+                continue;
+            }
+            if (!STORE_expect(locctx, expected_type)
+                || !STORE_find(locctx, search)) {
+                X509err(X509_F_LOOKUP_INT, ERR_R_STORE_LIB);
+            } else {
+                STORE_INFO *locinfo = NULL;
+
+                while ((locinfo = STORE_load(locctx)) != NULL) {
+                    int num_loaded = 0;
+
+                    /* Check for end of data */
+                    if (STORE_INFO_get_type(locinfo)
+                        == STORE_INFO_UNSPECIFIED) {
+                        STORE_INFO_free(locinfo);
+                        break;
+                    }
+
+                    /* loading here is best effort, so we ignore all errors */
+                    switch (STORE_INFO_get_type(locinfo)) {
+                    case STORE_INFO_NAME:
+                        {
+                            const char *entry = STORE_INFO_get0_NAME(locinfo);
+
+                            STORE_INFO_free(ltmp.name);
+                            ltmp.name = locinfo;
+                            ltmp.type = expected_type;
+                            CRYPTO_THREAD_read_lock(ctx->lock);
+                            idx = sk_LOADED_ENTRY_find(ctx->entries, &ltmp);
+                            CRYPTO_THREAD_unlock(ctx->lock);
+                            ltmp.name = NULL;
+                            if (idx >= 0)
+                                break;
+
+                            num_loaded =
+                                x509_load_cert_crl_file_int(ctx, entry,
+                                                            expected_type);
+
+                            if (num_loaded > 0) {
+                                LOADED_ENTRY *lent =
+                                    OPENSSL_malloc(sizeof(*lent));
+                                lent->name = locinfo;
+                                lent->type = expected_type;
+                                CRYPTO_THREAD_write_lock(ctx->lock);
+                                idx = sk_LOADED_ENTRY_push(ctx->entries, lent);
+                                CRYPTO_THREAD_unlock(ctx->lock);
+                                if (idx >= 0)
+                                    locinfo = NULL;
+                            }
+                        }
+                        break;
+                    case STORE_INFO_CERT:
+                        num_loaded =
+                            X509_STORE_add_cert(ctx->store_ctx,
+                                                STORE_INFO_get0_CERT(locinfo));
+
+                        if (num_loaded > 0) {
+                            LOADED_ENTRY *lent = OPENSSL_malloc(sizeof(*lent));
+                            memcpy(lent, &ltmp, sizeof(*lent));
+                            CRYPTO_THREAD_write_lock(ctx->lock);
+                            idx = sk_LOADED_ENTRY_push(ctx->entries, lent);
+                            CRYPTO_THREAD_unlock(ctx->lock);
+                            if (idx >= 0)
+                                ltmp.name = NULL;
+                        }
+
+                        break;
+                    case STORE_INFO_CRL:
+                        num_loaded =
+                            X509_STORE_add_crl(ctx->store_ctx,
+                                               STORE_INFO_get0_CRL(locinfo));
+
+                        if (num_loaded > 0) {
+                            LOADED_ENTRY *lent = OPENSSL_malloc(sizeof(*lent));
+                            memcpy(lent, &ltmp, sizeof(*lent));
+                            CRYPTO_THREAD_write_lock(ctx->lock);
+                            idx = sk_LOADED_ENTRY_push(ctx->entries, lent);
+                            CRYPTO_THREAD_unlock(ctx->lock);
+                            if (idx >= 0)
+                                ltmp.name = NULL;
+                        }
+
+                        break;
+                    default:
+                        /* We ignore everything else */
+                        break;
+                    }
+
+                    STORE_INFO_free(locinfo);
+                    locinfo = NULL;
+
+                    if (num_loaded == 0)
+                        break;
+                }
+            }
+            STORE_close(locctx);
+
+            /*
+             * Now that we've loaded all objects into our store,
+             * we try to fetch the one we're after from there.
+             * This will not necessarely be successful, as some STORE
+             * backends have a somewhat fuzzy concept of what names they
+             * should return (we know that the file: STORE returns names
+             * for all objects matching a 32-bit hash...)
+             */
+            {
+                union {
+                    X509 st_x509;
+                    X509_CRL crl;
+                } data;
+                X509_OBJECT stmp, *tmp = NULL;
+                int j;
+
+                stmp.type = type;
+                switch (type) {
+                case X509_LU_X509:
+                    data.st_x509.cert_info.subject =
+                        STORE_SEARCH_get0_name(search);
+                    stmp.data.x509 = &data.st_x509;
+                    break;
+                case X509_LU_CRL:
+                    data.crl.crl.issuer =
+                        STORE_SEARCH_get0_name(search);
+                    stmp.data.crl = &data.crl;
+                    break;
+                default:
+                    /* unreachable */
+                    break;
+                }
+
+                CRYPTO_THREAD_read_lock(ctx->lock);
+                j = sk_X509_OBJECT_find(ctx->store_ctx->objs, &stmp);
+                if (j != -1)
+                    tmp = sk_X509_OBJECT_value(ctx->store_ctx->objs, j);
+                CRYPTO_THREAD_unlock(ctx->lock);
+
+                if (tmp != NULL) {
+                    ok = 1;
+                    ret->type = tmp->type;
+                    memcpy(&ret->data, &tmp->data, sizeof(ret->data));
+                    break;
+                }
+            }
+        }
+        STORE_INFO_free(ltmp.name);
+    }
+
+    return ok;
 }
 
 int X509_LOOKUP_by_subject(X509_LOOKUP *ctx, X509_LOOKUP_TYPE type,
                            X509_NAME *name, X509_OBJECT *ret)
 {
-    if ((ctx->method == NULL) || (ctx->method->get_by_subject == NULL))
-        return 0;
-    if (ctx->skip)
-        return 0;
-    return ctx->method->get_by_subject(ctx, type, name, ret);
+    STORE_SEARCH *search = STORE_SEARCH_by_name(name);
+    int ok = 0;
+
+    if (search == NULL) {
+        X509err(X509_F_X509_LOOKUP_BY_SUBJECT, ERR_R_MALLOC_FAILURE);
+        return ok;
+    }
+    ok = lookup_int(ctx, type, search, ret);
+    STORE_SEARCH_free(search);
+    return ok;
 }
 
 int X509_LOOKUP_by_issuer_serial(X509_LOOKUP *ctx, X509_LOOKUP_TYPE type,
                                  X509_NAME *name, ASN1_INTEGER *serial,
                                  X509_OBJECT *ret)
 {
-    if ((ctx->method == NULL) || (ctx->method->get_by_issuer_serial == NULL))
-        return 0;
-    return ctx->method->get_by_issuer_serial(ctx, type, name, serial, ret);
+    STORE_SEARCH *search = STORE_SEARCH_by_issuer_serial(name, serial);
+    int ok = 0;
+
+    if (search == NULL) {
+        X509err(X509_F_X509_LOOKUP_BY_ISSUER_SERIAL, ERR_R_MALLOC_FAILURE);
+        return ok;
+    }
+    ok = lookup_int(ctx, type, search, ret);
+    STORE_SEARCH_free(search);
+    return ok;
 }
 
 int X509_LOOKUP_by_fingerprint(X509_LOOKUP *ctx, X509_LOOKUP_TYPE type,
                                const unsigned char *bytes, int len,
                                X509_OBJECT *ret)
 {
-    if ((ctx->method == NULL) || (ctx->method->get_by_fingerprint == NULL))
-        return 0;
-    return ctx->method->get_by_fingerprint(ctx, type, bytes, len, ret);
+    STORE_SEARCH *search = STORE_SEARCH_by_key_fingerprint(bytes, len);
+    int ok = 0;
+
+    if (search == NULL) {
+        X509err(X509_F_X509_LOOKUP_BY_FINGERPRINT, ERR_R_MALLOC_FAILURE);
+        return ok;
+    }
+    ok = lookup_int(ctx, type, search, ret);
+    STORE_SEARCH_free(search);
+    return ok;
 }
 
 int X509_LOOKUP_by_alias(X509_LOOKUP *ctx, X509_LOOKUP_TYPE type,
                          const char *str, int len, X509_OBJECT *ret)
 {
-    if ((ctx->method == NULL) || (ctx->method->get_by_alias == NULL))
-        return 0;
-    return ctx->method->get_by_alias(ctx, type, str, len, ret);
+    STORE_SEARCH *search = STORE_SEARCH_by_alias(str);
+    int ok = 0;
+
+    if (search == NULL) {
+        X509err(X509_F_X509_LOOKUP_BY_ALIAS, ERR_R_MALLOC_FAILURE);
+        return ok;
+    }
+    ok = lookup_int(ctx, type, search, ret);
+    STORE_SEARCH_free(search);
+    return ok;
 }
 
 static int x509_object_cmp(const X509_OBJECT *const *a,
@@ -148,8 +542,6 @@ X509_STORE *X509_STORE_new(void)
     if ((ret->objs = sk_X509_OBJECT_new(x509_object_cmp)) == NULL)
         goto err;
     ret->cache = 1;
-    if ((ret->get_cert_methods = sk_X509_LOOKUP_new_null()) == NULL)
-        goto err;
 
     if ((ret->param = X509_VERIFY_PARAM_new()) == NULL)
         goto err;
@@ -167,7 +559,6 @@ X509_STORE *X509_STORE_new(void)
 err:
     X509_VERIFY_PARAM_free(ret->param);
     sk_X509_OBJECT_free(ret->objs);
-    sk_X509_LOOKUP_free(ret->get_cert_methods);
     OPENSSL_free(ret);
     return NULL;
 }
@@ -190,8 +581,6 @@ static void cleanup(X509_OBJECT *a)
 void X509_STORE_free(X509_STORE *vfy)
 {
     int i;
-    STACK_OF(X509_LOOKUP) *sk;
-    X509_LOOKUP *lu;
 
     if (vfy == NULL)
         return;
@@ -202,13 +591,7 @@ void X509_STORE_free(X509_STORE *vfy)
         return;
     REF_ASSERT_ISNT(i < 0);
 
-    sk = vfy->get_cert_methods;
-    for (i = 0; i < sk_X509_LOOKUP_num(sk); i++) {
-        lu = sk_X509_LOOKUP_value(sk, i);
-        X509_LOOKUP_shutdown(lu);
-        X509_LOOKUP_free(lu);
-    }
-    sk_X509_LOOKUP_free(sk);
+    X509_LOOKUP_free(vfy->lookup);
     sk_X509_OBJECT_pop_free(vfy->objs, cleanup);
 
     CRYPTO_free_ex_data(CRYPTO_EX_INDEX_X509_STORE, vfy, &vfy->ex_data);
@@ -231,30 +614,13 @@ int X509_STORE_up_ref(X509_STORE *vfy)
 
 X509_LOOKUP *X509_STORE_add_lookup(X509_STORE *v, X509_LOOKUP_METHOD *m)
 {
-    int i;
-    STACK_OF(X509_LOOKUP) *sk;
-    X509_LOOKUP *lu;
+    if (v->lookup == NULL) {
+        v->lookup = X509_LOOKUP_new(m);
+        if (v->lookup != NULL)
+            v->lookup->store_ctx = v;
+    }
 
-    sk = v->get_cert_methods;
-    for (i = 0; i < sk_X509_LOOKUP_num(sk); i++) {
-        lu = sk_X509_LOOKUP_value(sk, i);
-        if (m == lu->method) {
-            return lu;
-        }
-    }
-    /* a new one */
-    lu = X509_LOOKUP_new(m);
-    if (lu == NULL)
-        return NULL;
-    else {
-        lu->store_ctx = v;
-        if (sk_X509_LOOKUP_push(v->get_cert_methods, lu))
-            return lu;
-        else {
-            X509_LOOKUP_free(lu);
-            return NULL;
-        }
-    }
+    return v->lookup;
 }
 
 X509_OBJECT *X509_STORE_CTX_get_obj_by_subject(X509_STORE_CTX *vs,
@@ -276,23 +642,16 @@ int X509_STORE_CTX_get_by_subject(X509_STORE_CTX *vs, X509_LOOKUP_TYPE type,
                                   X509_NAME *name, X509_OBJECT *ret)
 {
     X509_STORE *ctx = vs->ctx;
-    X509_LOOKUP *lu;
     X509_OBJECT stmp, *tmp;
-    int i, j;
 
     CRYPTO_THREAD_write_lock(ctx->lock);
     tmp = X509_OBJECT_retrieve_by_subject(ctx->objs, type, name);
     CRYPTO_THREAD_unlock(ctx->lock);
 
     if (tmp == NULL || type == X509_LU_CRL) {
-        for (i = 0; i < sk_X509_LOOKUP_num(ctx->get_cert_methods); i++) {
-            lu = sk_X509_LOOKUP_value(ctx->get_cert_methods, i);
-            j = X509_LOOKUP_by_subject(lu, type, name, &stmp);
-            if (j) {
-                tmp = &stmp;
-                break;
-            }
-        }
+        if (ctx->lookup != NULL
+            && X509_LOOKUP_by_subject(ctx->lookup, type, name, &stmp))
+            tmp = &stmp;
         if (tmp == NULL)
             return 0;
     }
@@ -858,4 +1217,19 @@ void *X509_STORE_get_ex_data(X509_STORE *ctx, int idx)
 X509_STORE *X509_STORE_CTX_get0_store(X509_STORE_CTX *ctx)
 {
     return ctx->ctx;
+}
+
+/* Deprecated stuff.  We still need the calls, so we return nonsense */
+static struct x509_lookup_method_st {
+    int _;
+} dummy = { 0 };
+
+X509_LOOKUP_METHOD *X509_LOOKUP_hash_dir(void)
+{
+    return &dummy;
+}
+
+X509_LOOKUP_METHOD *X509_LOOKUP_file(void)
+{
+    return &dummy;
 }
