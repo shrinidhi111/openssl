@@ -71,6 +71,8 @@ indir "store_$$" => sub {
     {
         skip "failed initialisation", $n unless init();
 
+        my $rehash = init_rehash();
+
         foreach (@noexist_files) {
             my $file = srctop_file($_);
             ok(!run(app(["openssl", "storeutl", $file])));
@@ -114,31 +116,35 @@ indir "store_$$" => sub {
                     srctop_file('test', 'testcrl.pem')])),
            "Checking that -crls returns 1 object on a CRL file");
 
-        # subject from testx509.pem:
-        # '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert'
-        # issuer from testcrl.pem:
-        # '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority'
-        ok(run(app(['openssl', 'storeutl',
-                    '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
-                    catdir(curdir(), 'rehash')])));
-        ok(run(app(['openssl', 'storeutl',
-                    '-subject',
-                    '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
-                    catdir(curdir(), 'rehash')])));
-        ok(run(app(['openssl', 'storeutl', '-certs',
-                    '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
-                    catdir(curdir(), 'rehash')])));
-        ok(run(app(['openssl', 'storeutl', '-crls',
-                    '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
-                    catdir(curdir(), 'rehash')])));
-        ok(run(app(['openssl', 'storeutl', '-certs',
-                    '-subject',
-                    '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
-                     catdir(curdir(), 'rehash')])));
-        ok(run(app(['openssl', 'storeutl', '-crls',
-                    '-subject',
-                    '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
-                    catdir(curdir(), 'rehash')])));
+    SKIP: {
+            skip "failed rehash initialisation", 6 unless $rehash;
+
+            # subject from testx509.pem:
+            # '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert'
+            # issuer from testcrl.pem:
+            # '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority'
+            ok(run(app(['openssl', 'storeutl',
+                        '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                        catdir(curdir(), 'rehash')])));
+            ok(run(app(['openssl', 'storeutl',
+                        '-subject',
+                        '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
+                        catdir(curdir(), 'rehash')])));
+            ok(run(app(['openssl', 'storeutl', '-certs',
+                        '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                        catdir(curdir(), 'rehash')])));
+            ok(run(app(['openssl', 'storeutl', '-crls',
+                        '-subject', '/C=AU/ST=QLD/CN=SSLeay\/rsa test cert',
+                        catdir(curdir(), 'rehash')])));
+            ok(run(app(['openssl', 'storeutl', '-certs',
+                        '-subject',
+                        '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
+                        catdir(curdir(), 'rehash')])));
+            ok(run(app(['openssl', 'storeutl', '-crls',
+                        '-subject',
+                        '/C=US/O=RSA Data Security, Inc./OU=Secure Server Certification Authority',
+                        catdir(curdir(), 'rehash')])));
+        }
     }
 }, create => 1, cleanup => 1;
 
@@ -324,7 +330,12 @@ sub init {
                           close $outfh;
                           return 1;
                       }, grep(/\.der$/, @generated_files))
-            && mkdir(catdir(curdir(), 'rehash'))
+           );
+}
+
+sub init_rehash {
+    return (
+            mkdir(catdir(curdir(), 'rehash'))
             && copy(srctop_file('test', 'testx509.pem'),
                     catdir(curdir(), 'rehash'))
             && copy(srctop_file('test', 'testcrl.pem'),
