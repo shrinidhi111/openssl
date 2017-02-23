@@ -1052,6 +1052,12 @@ static int file_name_check(STORE_LOADER_CTX *ctx, const char *name)
     if (ctx->_.dir.search_name[0] == '\0')
         return 1;
 
+    /* If the expected type isn't supported, no name is accepted */
+    if (ctx->expected_type != STORE_INFO_UNSPECIFIED
+        && ctx->expected_type != STORE_INFO_CERT
+        && ctx->expected_type != STORE_INFO_CRL)
+        return 0;
+
     /*
      * First, check the basename
      */
@@ -1071,20 +1077,29 @@ static int file_name_check(STORE_LOADER_CTX *ctx, const char *name)
         return 0;
 
     /*
-     * Last, check that the rest of the extension is a decimal number.
+     * Last, check that the rest of the extension is a decimal number, at
+     * least one digit long.
      */
-    if (ctx->expected_type == STORE_INFO_UNSPECIFIED
-        || ctx->expected_type == STORE_INFO_CERT
-        || ctx->expected_type == STORE_INFO_CRL) {
-        while (isdigit(*p))
-            p++;
-        return *p == '\0';
-    }
+    if (!isdigit(*p))
+        return 0;
+    while (isdigit(*p))
+        p++;
+
+# ifdef __VMS
+    /*
+     * One extra step here, check for a possible generation number.
+     */
+    if (*p == ';')
+        for (p++; *p != '\0'; p++)
+            if (!isdigit(*p))
+                break;
+# endif
 
     /*
-     * No match, or the expected return type isn't supported => fail.
+     * If we've reached the end of the string at this point, we've successfully
+     * found a fitting file name.
      */
-    return 0;
+    return *p == '\0';
 }
 
 static int file_eof(STORE_LOADER_CTX *ctx);
