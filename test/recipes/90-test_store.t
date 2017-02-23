@@ -242,7 +242,11 @@ sub to_rel_file_uri {
     $dir =~ s|/[^/]*[^/\.]+[^/]*/\.\.$|/|;
     $dir =~ s|^[^/]*[^/\.]+[^/]*/\.\./|/|;
     $dir =~ s|^[^/]*[^/\.]+[^/]*/\.\.$||;
-    $dir .= '/' if $dir ne '' && $dir !~ m|/$|;
+    if ($isdir // 0) {
+        $dir =~ s|/$|| if $dir ne '/';
+    } else {
+        $dir .= '/' if $dir ne '' && $dir !~ m|/$|;
+    }
 
     # If the file system has separate volumes (at present, Windows and VMS)
     # we need to handle them.  In URIs, they are invariably the first
