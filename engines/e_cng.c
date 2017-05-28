@@ -740,6 +740,7 @@ static int bind_cng(ENGINE *e)
         || !STORE_register_loader(loader)) {
         CNGerr(CNG_F_BIND_CNG, CNG_R_BIND_FAILED);
         cng_store_free(loader);
+        cng_destroy(e);
         return 0;
     }
 
