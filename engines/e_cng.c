@@ -710,61 +710,6 @@ static int cng_finish(ENGINE *e)
  * -------------
  */
 
-static char *url_decode(char *str)
-{
-    char *p1 = str, *p2 = str;
-
-    while (*p2 != '\0') {
-        if (*p2 != '%') {
-            *p1++ = *p2++;
-        } else {
-            int h1 = OPENSSL_hexchar2int(*++p2);
-            int h2 = OPENSSL_hexchar2int(*++p2);
-
-            if (h1 < 0 || h2 < 0)
-                return NULL;
-            *p1++ = (char)((h1 << 4) | h2);
-            p2++;
-        }
-    }
-
-    *p1++ = *p2++;               /* Copy the NUL byte */
-
-    return str;
-}
-
-static const char unreserved[] =
-    "0123456789-_.~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-static const char reserved[] =
-    "!*'();:@&=+$,/?#[]";
-static const char hexdig[] =
-    "0123456789abcdef";
-
-static char *url_encode(char *str, int encode_reserved)
-{
-    /* Worst case scenario, we need 3 chars per byte */
-    char *new = OPENSSL_zalloc((strlen(str) + 1) * 3);
-    char *p1 = new, *p2 = str;
-
-    if (new == NULL)
-        return NULL;
-
-    while (*p2 != '\0') {
-        if (strchr(unreserved, *p2) == NULL
-            && (encode_reserved || strchr(reserved, *p2) == NULL)) {
-            *p1++ = '%';
-            *p1++ = hexdig[(*p2 >> 4) & 0xf];
-            *p1++ = hexdig[*p2 & 0xf];
-            p2++;
-        } else {
-            *p1++ = *p2++;
-        }
-    }
-    *p1++ = '\0';
-
-    return new;
-}
-
 static int cng_destroy(ENGINE *e)
 {
     STORE_LOADER *loader = ENGINE_get_ex_data(e, loader_idx);
@@ -834,6 +779,74 @@ void engine_load_cng_int(void)
  * Utility functions
  * -----------------
  */
+
+static const char hexdig[] =
+    "0123456789abcdef";
+
+static size_t hex_encode_inline(char *dst, char *src, size_t src_len)
+{
+    size_t cnt = 0;
+
+    while (src_len-- > 0) {
+        *dst++ = hexdig[(*src >> 4) & 0xf];
+        *dst++ = hexdig[*src & 0xf];
+        cnt += 2;
+        src++;
+    }
+
+    return cnt;
+}
+
+static char *url_decode(char *str)
+{
+    char *p1 = str, *p2 = str;
+
+    while (*p2 != '\0') {
+        if (*p2 != '%') {
+            *p1++ = *p2++;
+        } else {
+            int h1 = OPENSSL_hexchar2int(*++p2);
+            int h2 = OPENSSL_hexchar2int(*++p2);
+
+            if (h1 < 0 || h2 < 0)
+                return NULL;
+            *p1++ = (char)((h1 << 4) | h2);
+            p2++;
+        }
+    }
+
+    *p1++ = *p2++;               /* Copy the NUL byte */
+
+    return str;
+}
+
+static const char unreserved[] =
+    "0123456789-_.~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+static const char reserved[] =
+    "!*'();:@&=+$,/?#[]";
+
+static char *url_encode(char *str, int encode_reserved)
+{
+    /* Worst case scenario, we need 3 chars per byte */
+    char *new = OPENSSL_zalloc((strlen(str) + 1) * 3);
+    char *p1 = new, *p2 = str;
+
+    if (new == NULL)
+        return NULL;
+
+    while (*p2 != '\0') {
+        if (strchr(unreserved, *p2) == NULL
+            && (encode_reserved || strchr(reserved, *p2) == NULL)) {
+            *p1++ = '%';
+            p1 += hex_encode_inline(p1, p2++, 1);
+        } else {
+            *p1++ = *p2++;
+        }
+    }
+    *p1++ = '\0';
+
+    return new;
+}
 
 static void cng_adderror(DWORD err)
 {
