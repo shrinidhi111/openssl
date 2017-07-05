@@ -15,6 +15,9 @@ B<openssl> B<storeutl>
 [B<-text arg>]
 [B<-engine id>]
 [B<-r>]
+[B<-certs>]
+[B<-keys>]
+[B<-crls>]
 B<uri> ...
 
 =head1 DESCRIPTION
@@ -59,6 +62,16 @@ The engine will then be set as the default for all available algorithms.
 =item B<-r>
 
 Fetch objects recursively when possible.
+
+=item B<-certs>
+
+=item B<-keys>
+
+=item B<-crls>
+
+Only select the certificates, keys or CRLs from the given URI.
+However, if this URI would return a set of names (URIs), those are always
+returned.
 
 =back
 
