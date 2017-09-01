@@ -848,7 +848,7 @@ static OSSL_STORE_LOADER_CTX *file_open(const OSSL_STORE_LOADER *loader,
                 errno = ctx->_.dir.last_errno;
                 openssl_strerror_r(errno, errbuf, sizeof(errbuf));
                 OSSL_STOREerr(OSSL_STORE_F_FILE_OPEN, ERR_R_SYS_LIB);
-                ERR_add_error_data(1, errbuf);
+                ERR_add_error_data(4, ",Err=", errbuf, "Path=", path);
                 goto err;
             }
             ctx->_.dir.end_reached = 1;
