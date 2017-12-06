@@ -1238,31 +1238,18 @@ unless ($disabled{asm}) {
     }
 }
 
-my %predefined;
+my %predefined = compiler_predefined($target{cc});
 
-if ($^O ne "VMS") {
-    my $cc = "$config{cross_compile_prefix}$target{cc}";
-
-    # collect compiler pre-defines from gcc or gcc-alike...
-    open(PIPE, "$cc -dM -E -x c /dev/null 2>&1 |");
-    while (<PIPE>) {
-	m/^#define\s+(\w+(?:\(\w+\))?)(?:\s+(.+))?/ or last;
-	$predefined{$1} = $2 // "";
-    }
-    close(PIPE);
-
-    if (!$disabled{makedepend}) {
-	# We know that GNU C version 3 and up as well as all clang
-	# versions support dependency generation
-	if ($predefined{__GNUC__} >= 3) {
-	    $config{makedepprog} = $cc;
-	} else {
-	    $config{makedepprog} = which('makedepend');
-	    $disabled{makedepend} = "unavailable" unless $config{makedepprog};
-	}
+if (!$disabled{makedepend}) {
+    # We know that GNU C version 3 and up as well as all clang
+    # versions support dependency generation
+    if ($predefined{__GNUC__} >= 3) {
+        $config{makedepprog} = $cc;
+    } else {
+        $config{makedepprog} = which('makedepend');
+        $disabled{makedepend} = "unavailable" unless $config{makedepprog};
     }
 }
-
 
 
 # Deal with bn_ops ###################################################
@@ -2499,6 +2486,30 @@ sub run_dofile
     system($cmd);
     exit 1 if $? != 0;
     rename("$out.new", $out) || die "Can't rename $out.new, $!";
+}
+
+# Note that this is really only useful to detect features of gcc and derivates
+# Any other compiler is likely to just return an empty hash
+sub compiler_predefined {
+    state %predefined;
+
+    return () if $^O eq 'VMS';
+
+    die "compiler_predefines called without a defined \$target{cc}"
+        unless $target{cc};
+
+    my $cc = "$config{cross_compile_prefix}$target{cc}";
+    if (! %predefined{$cc}) {
+        # collect compiler pre-defines from gcc or gcc-alike...
+        open(PIPE, "$cc -dM -E -x c /dev/null 2>&1 |");
+        while (my $l = <PIPE>) {
+            $l =~ m/^#define\s+(\w+(?:\(\w+\))?)(?:\s+(.+))?/ or last;
+            $predefined{$cc}->{$1} = $2 // '';
+        }
+        close(PIPE);
+    }
+
+    return %{$predefined{$cc}};
 }
 
 sub which
