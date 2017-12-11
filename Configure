@@ -895,7 +895,7 @@ $config{target} = $target;
     $overrides{nm} =      env('NM')             if env('NM');
     $overrides{rc} =      env('RC')  || env('WINDRES')
         if env('RC')  || env('WINDRES');
-    $overrides{build_file} = env(BUILDFILE)     if env(BUILDFILE);
+    $overrides{build_file} = env('BUILDFILE')   if env('BUILDFILE');
 
     # Overrides for thread_scheme and shared_target in case they are disabled
     $overrides{thread_scheme} = "(unknown)"     if $disabled{threads};
