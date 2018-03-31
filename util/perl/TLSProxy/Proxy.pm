@@ -230,12 +230,14 @@ sub start
     # Just make sure everything else is simply printed.
     # The sub process inherits our SERVER and duplicates it to STDIN to allow
     # the exec'd command to simply consume and pring everything.
+    open SAVEDIN, '<&', \*STDIN;
+    close STDIN;
+    open STDIN, '<&', \*SERVER;
     if (fork() == 0) {
-        close STDIN;
-        open STDIN, '<&', \*SERVER;
-        close SERVER;
         exec ("$^X -ne print");
     }
+    close STDIN;
+    open STDIN, '<&', \*SAVEDIN;
 
     print STDERR "Server responds on ",
         $self->{server_addr}, ":", $self->{server_port}, "\n";
