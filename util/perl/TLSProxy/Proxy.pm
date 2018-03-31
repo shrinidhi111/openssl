@@ -215,11 +215,13 @@ sub start
         print STDERR "Server command: $execcmd\n";
     }
 
-    $self->serverpid(open(SERVER, "$execcmd |"));
+    open SAVEDIN, '<&', \*STDIN;
+    close STDIN;
+    $self->serverpid(open(STDIN, "$execcmd |"));
 
     # Process the output from s_server until we find the ACCEPT line, which
     # tells us what the accepting address and port are.
-    while (<SERVER>) {
+    while (<STDIN>) {
         print;
         s/\R$//;                # Better chomp
         next unless (/^ACCEPT\s.*:(\d+)$/);
@@ -230,13 +232,9 @@ sub start
     # Just make sure everything else is simply printed.
     # The sub process inherits our SERVER and duplicates it to STDIN to allow
     # the exec'd command to simply consume and pring everything.
-    open SAVEDIN, '<&', \*STDIN;
-    close STDIN;
-    open STDIN, '<&', \*SERVER;
     if (fork() == 0) {
         exec ("$^X -ne print");
     }
-    close STDIN;
     open STDIN, '<&', \*SAVEDIN;
 
     print STDERR "Server responds on ",
