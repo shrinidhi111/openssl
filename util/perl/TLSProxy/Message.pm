@@ -163,7 +163,7 @@ sub get_messages
     @message_frag_lens = ();
 
     if ($serverin != $server && length($payload) != 0) {
-        die "Changed peer, but we still have fragment data\n";
+        die "Changed peer ($server => $serverin), but we still have fragment data\n";
     }
     $server = $serverin;
 

@@ -154,15 +154,20 @@ my $proxy = TLSProxy::Proxy->new(
 $proxy->serverconnects(2);
 $proxy->clientflags("-no_tls1_3 -sess_out ".$session);
 $proxy->start() or plan skip_all => "Unable to start up Proxy for tests";
+print STDERR "DEBUG0\n";
 plan tests => 21;
 checkhandshake($proxy, checkhandshake::DEFAULT_HANDSHAKE,
                checkhandshake::DEFAULT_EXTENSIONS,
                "Default handshake test");
 
 #Test 2: Resumption handshake
+print "DEBUG1\n";
 $proxy->clearClient();
+print "DEBUG2\n";
 $proxy->clientflags("-no_tls1_3 -sess_in ".$session);
+print "DEBUG3\n";
 $proxy->clientstart();
+print "DEBUG4\n";
 checkhandshake($proxy, checkhandshake::RESUME_HANDSHAKE,
                checkhandshake::DEFAULT_EXTENSIONS
                & ~checkhandshake::SESSION_TICKET_SRV_EXTENSION,

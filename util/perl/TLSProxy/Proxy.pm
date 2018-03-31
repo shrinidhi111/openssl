@@ -10,6 +10,7 @@ use POSIX ":sys_wait_h";
 
 package TLSProxy::Proxy;
 
+use Carp 'cluck';
 use File::Spec;
 use IO::Socket;
 use IO::Select;
@@ -214,11 +215,11 @@ sub start
         print STDERR "Server command: $execcmd\n";
     }
 
-    $self->serverpid(open(my $sh, "$execcmd |"));
+    $self->serverpid(open(SERVER, "$execcmd |"));
 
     # Process the output from s_server until we find the ACCEPT line, which
     # tells us what the accepting address and port are.
-    while (<$sh>) {
+    while (<SERVER>) {
         print;
         s/\R$//;                # Better chomp
         next unless (/^ACCEPT\s.*:(\d+)$/);
@@ -227,11 +228,12 @@ sub start
     }
 
     # Just make sure everything else is simply printed.
-    # The sub process simply inherits our STDIN and will keep consuming
-    # and printing it as long as there is anything there, out of our way.
+    # The sub process inherits our SERVER and duplicates it to STDIN to allow
+    # the exec'd command to simply consume and pring everything.
     if (fork() == 0) {
-        open STDIN, '<&', $sh;
-        close $sh;
+        close STDIN;
+        open STDIN, '<&', \*SERVER;
+        close SERVER;
         exec ("$^X -ne print");
     }
 
@@ -246,6 +248,7 @@ sub clientstart
     my ($self) = shift;
     my $oldstdout;
 
+    print "FOO\n";
     if ($self->execute) {
         my $pid = fork();
         if ($pid == 0) {
@@ -385,6 +388,7 @@ sub clientstart
     print "Waiting for client process to close: ".$self->clientpid."\n";
     waitpid($self->clientpid, 0);
 
+    cluck "BAR";
     return 1;
 }
 
