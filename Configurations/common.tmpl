@@ -15,7 +15,9 @@
      return $result[0];
  }
  sub resolvedepends {
-     my $thing = shift;
+     my $orig = shift;
+     my $extensionlessorig = extensionlesslib($orig);
+     my $thing = shift // $orig;
      my $extensionlessthing = extensionlesslib($thing);
      my @listsofar = @_;    # to check if we're looping
      my @list = @{$unified_info{depends}->{$thing} //
@@ -26,7 +28,10 @@
              my $extensionlessitem = extensionlesslib($item);
              # It's time to break off when the dependency list starts looping
              next if grep { extensionlesslib($_) eq $extensionlessitem } @listsofar;
-             push @newlist, $item, resolvedepends($item, @listsofar, $item);
+             # It's time to break off when we're back at $thing
+             next if $extensionlessitem eq $extensionlessorig;
+             push @newlist,
+                 $item, resolvedepends($orig, $item, @listsofar, $item);
          }
      }
      @newlist;
