@@ -198,6 +198,25 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_load_crypto_strings)
     return ret;
 }
 
+static CRYPTO_ONCE add_all_pkey_meths = CRYPTO_ONCE_STATIC_INIT;
+DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_pkey_meths)
+{
+    /*
+     * OPENSSL_NO_AUTOALGINIT is provided here to prevent at compile time
+     * pulling in all the pkey_meths during static linking
+     */
+#ifndef OPENSSL_NO_AUTOALGINIT
+# ifdef OPENSSL_INIT_DEBUG
+    fprintf(stderr, "OPENSSL_INIT: ossl_init_add_all_pkey_meths: "
+                    "openssl_add_all_ameths_int(), "
+                    "openssl_add_all_pmeths_int()\n");
+# endif
+    openssl_add_all_ameths_int();
+    openssl_add_all_pmeths_int();
+#endif
+    return 1;
+}
+
 static CRYPTO_ONCE add_all_ciphers = CRYPTO_ONCE_STATIC_INIT;
 DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_ciphers)
 {
@@ -598,6 +617,14 @@ int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)
 
     if ((opts & OPENSSL_INIT_LOAD_CRYPTO_STRINGS)
             && !RUN_ONCE(&load_crypto_strings, ossl_init_load_crypto_strings))
+        return 0;
+
+    if ((opts & OPENSSL_INIT_NO_ADD_ALL_PKEY_METHS)
+            && !RUN_ONCE(&add_all_pkey_meths, ossl_init_no_add_algs))
+        return 0;
+
+    if ((opts & OPENSSL_INIT_ADD_ALL_PKEY_METHS)
+            && !RUN_ONCE(&add_all_pkey_meths, ossl_init_add_all_pkey_meths))
         return 0;
 
     if ((opts & OPENSSL_INIT_NO_ADD_ALL_CIPHERS)
