@@ -237,15 +237,12 @@ ___
 
 $code.=<<___;
 .text
-
-.extern	OPENSSL_ia32cap_P
-
 .globl	sha256_multi_block
 .type	sha256_multi_block,\@function,3
 .align	32
 sha256_multi_block:
 .cfi_startproc
-	mov	OPENSSL_ia32cap_P+4(%rip),%rcx
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+4(%rip),%rcx
 	bt	\$61,%rcx			# check SHA bit
 	jc	_shaext_shortcut
 ___

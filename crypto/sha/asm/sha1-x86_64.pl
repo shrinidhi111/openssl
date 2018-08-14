@@ -253,16 +253,14 @@ push(@xi,shift(@xi));
 
 $code.=<<___;
 .text
-.extern	OPENSSL_ia32cap_P
-
 .globl	sha1_block_data_order
 .type	sha1_block_data_order,\@function,3
 .align	16
 sha1_block_data_order:
 .cfi_startproc
-	mov	OPENSSL_ia32cap_P+0(%rip),%r9d
-	mov	OPENSSL_ia32cap_P+4(%rip),%r8d
-	mov	OPENSSL_ia32cap_P+8(%rip),%r10d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+0(%rip),%r9d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+4(%rip),%r8d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+8(%rip),%r10d
 	test	\$`1<<9`,%r8d		# check SSSE3 bit
 	jz	.Lialu
 ___

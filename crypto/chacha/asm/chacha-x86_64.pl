@@ -97,9 +97,6 @@ open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
 
 $code.=<<___;
 .text
-
-.extern OPENSSL_ia32cap_P
-
 .align	64
 .Lzero:
 .long	0,0,0,0
@@ -255,7 +252,7 @@ ChaCha20_ctr32:
 .cfi_startproc
 	cmp	\$0,$len
 	je	.Lno_data
-	mov	OPENSSL_ia32cap_P+4(%rip),%r10
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+4(%rip),%r10
 ___
 $code.=<<___	if ($avx>2);
 	bt	\$48,%r10		# check for AVX512F
@@ -915,7 +912,7 @@ ChaCha20_4x:
 	mov		%r10,%r11
 ___
 $code.=<<___	if ($avx>1);
-	shr		\$32,%r10		# OPENSSL_ia32cap_P+8
+	shr		\$32,%r10		# OPENSSL_ia32cap_P\@GOTPCREL+8
 	test		\$`1<<5`,%r10		# test AVX2
 	jnz		.LChaCha20_8x
 ___

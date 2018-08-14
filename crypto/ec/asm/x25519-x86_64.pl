@@ -483,12 +483,11 @@ if ($addx) {
 my ($acc0,$acc1,$acc2,$acc3,$acc4,$acc5,$acc6,$acc7) = map("%r$_",(8..15));
 
 $code.=<<___;
-.extern	OPENSSL_ia32cap_P
 .globl	x25519_fe64_eligible
 .type	x25519_fe64_eligible,\@abi-omnipotent
 .align	32
 x25519_fe64_eligible:
-	mov	OPENSSL_ia32cap_P+8(%rip),%ecx
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+8(%rip),%ecx
 	xor	%eax,%eax
 	and	\$0x80100,%ecx
 	cmp	\$0x80100,%ecx

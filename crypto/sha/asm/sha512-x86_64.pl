@@ -265,8 +265,6 @@ ___
 
 $code=<<___;
 .text
-
-.extern	OPENSSL_ia32cap_P
 .globl	$func
 .type	$func,\@function,3
 .align	16
@@ -274,7 +272,7 @@ $func:
 .cfi_startproc
 ___
 $code.=<<___ if ($SZ==4 || $avx);
-	lea	OPENSSL_ia32cap_P(%rip),%r11
+	lea	OPENSSL_ia32cap_P\@GOTPCREL(%rip),%r11
 	mov	0(%r11),%r9d
 	mov	4(%r11),%r10d
 	mov	8(%r11),%r11d

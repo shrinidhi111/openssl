@@ -1719,7 +1719,7 @@ $code.=<<___;
 .globl	AES_cbc_encrypt
 .type	AES_cbc_encrypt,\@function,6
 .align	16
-.extern	OPENSSL_ia32cap_P
+#.extern	OPENSSL_ia32cap_P
 .globl	asm_AES_cbc_encrypt
 .hidden	asm_AES_cbc_encrypt
 asm_AES_cbc_encrypt:
@@ -1751,7 +1751,7 @@ AES_cbc_encrypt:
 	cmp	\$0,%r9
 	cmoveq	%r10,$sbox
 
-	mov	OPENSSL_ia32cap_P(%rip),%r10d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL(%rip),%r10d
 	cmp	\$$speed_limit,%rdx
 	jb	.Lcbc_slow_prologue
 	test	\$15,%rdx

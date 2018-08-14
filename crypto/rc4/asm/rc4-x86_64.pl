@@ -133,8 +133,6 @@ $out="%rcx";	    # arg4
 {
 $code=<<___;
 .text
-.extern	OPENSSL_ia32cap_P
-
 .globl	RC4
 .type	RC4,\@function,4
 .align	16
@@ -172,7 +170,7 @@ $code.=<<___;
 	mov	-4($dat),$YY#b
 	cmpl	\$-1,256($dat)
 	je	.LRC4_CHAR
-	mov	OPENSSL_ia32cap_P(%rip),%r8d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL(%rip),%r8d
 	xor	$TX[1],$TX[1]
 	inc	$XX[0]#b
 	sub	$XX[0],$TX[1]
@@ -462,7 +460,7 @@ RC4_set_key:
 	xor	%r10,%r10
 	xor	%r11,%r11
 
-	mov	OPENSSL_ia32cap_P(%rip),$idx#d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL(%rip),$idx#d
 	bt	\$20,$idx#d	# RC4_CHAR?
 	jc	.Lc1stloop
 	jmp	.Lw1stloop
@@ -526,7 +524,7 @@ RC4_set_key:
 .align	16
 RC4_options:
 	lea	.Lopts(%rip),%rax
-	mov	OPENSSL_ia32cap_P(%rip),%edx
+	mov	OPENSSL_ia32cap_P\@GOTPCREL(%rip),%edx
 	bt	\$20,%edx
 	jc	.L8xchar
 	bt	\$30,%edx

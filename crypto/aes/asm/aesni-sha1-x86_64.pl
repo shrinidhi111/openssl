@@ -127,15 +127,13 @@ open OUT,"| \"$^X\" \"$xlate\" $flavour \"$output\"";
 
 $code.=<<___;
 .text
-.extern	OPENSSL_ia32cap_P
-
 .globl	aesni_cbc_sha1_enc
 .type	aesni_cbc_sha1_enc,\@abi-omnipotent
 .align	32
 aesni_cbc_sha1_enc:
 	# caller should check for SSSE3 and AES-NI bits
-	mov	OPENSSL_ia32cap_P+0(%rip),%r10d
-	mov	OPENSSL_ia32cap_P+4(%rip),%r11
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+0(%rip),%r10d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+4(%rip),%r11
 ___
 $code.=<<___ if ($shaext);
 	bt	\$61,%r11		# check SHA bit
@@ -841,8 +839,8 @@ $code.=<<___;
 .align	32
 aesni256_cbc_sha1_dec:
 	# caller should check for SSSE3 and AES-NI bits
-	mov	OPENSSL_ia32cap_P+0(%rip),%r10d
-	mov	OPENSSL_ia32cap_P+4(%rip),%r11d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+0(%rip),%r10d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+4(%rip),%r11d
 ___
 $code.=<<___ if ($avx);
 	and	\$`1<<28`,%r11d		# mask AVX bit

@@ -155,9 +155,6 @@ ___
 
 $code.=<<___;
 .text
-
-.extern	OPENSSL_ia32cap_P
-
 .globl	poly1305_init
 .hidden	poly1305_init
 .globl	poly1305_blocks
@@ -180,7 +177,7 @@ poly1305_init:
 	lea	poly1305_emit(%rip),%r11
 ___
 $code.=<<___	if ($avx);
-	mov	OPENSSL_ia32cap_P+4(%rip),%r9
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+4(%rip),%r9
 	lea	poly1305_blocks_avx(%rip),%rax
 	lea	poly1305_emit_avx(%rip),%rcx
 	bt	\$`60-32`,%r9		# AVX?
@@ -1669,7 +1666,7 @@ poly1305_blocks_avx2:
 
 .Lproceed_avx2:
 	mov	%r15,$len			# restore $len
-	mov	OPENSSL_ia32cap_P+8(%rip),%r10d
+	mov	OPENSSL_ia32cap_P\@GOTPCREL+8(%rip),%r10d
 	mov	\$`(1<<31|1<<30|1<<16)`,%r11d
 
 	mov	0(%rsp),%r15
@@ -1694,7 +1691,7 @@ poly1305_blocks_avx2:
 .align	32
 .Leven_avx2:
 .cfi_startproc
-	mov		OPENSSL_ia32cap_P+8(%rip),%r10d
+	mov		OPENSSL_ia32cap_P\@GOTPCREL+8(%rip),%r10d
 	vmovd		4*0($ctx),%x#$H0	# load hash value base 2^26
 	vmovd		4*1($ctx),%x#$H1
 	vmovd		4*2($ctx),%x#$H2

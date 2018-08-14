@@ -117,8 +117,6 @@ $framesz=16*$SZ+8*8;
 
 $code=<<___;
 .text
-
-.extern	OPENSSL_ia32cap_P
 .globl	$func
 .type	$func,\@abi-omnipotent
 .align	16
@@ -126,7 +124,7 @@ $func:
 ___
 						if ($avx) {
 $code.=<<___;
-	lea	OPENSSL_ia32cap_P(%rip),%r11
+	lea	OPENSSL_ia32cap_P\@GOTPCREL(%rip),%r11
 	mov	\$1,%eax
 	cmp	\$0,`$win64?"%rcx":"%rdi"`
 	je	.Lprobe
