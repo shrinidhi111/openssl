@@ -109,12 +109,16 @@ my $debug=0;
 my $trace=0;
 my $verbose=0;
 
+my $algorithms_num= catfile($config{sourcedir},"util","libosslalgos.num");
+my $compat_num= catfile($config{sourcedir},"util","libosslcompat.num");
 my $crypto_num= catfile($config{sourcedir},"util","libcrypto.num");
 my $ssl_num=    catfile($config{sourcedir},"util","libssl.num");
 my $libname;
 
 my $do_update = 0;
 my $do_rewrite = 1;
+my $do_algorithms = 0;
+my $do_compat = 0;
 my $do_crypto = 0;
 my $do_ssl = 0;
 my $do_ctest = 0;
@@ -146,6 +150,10 @@ my @known_algorithms = ( # These are algorithms we know are guarded in relevant
 			 "DEPRECATEDIN_1_0_0",
 			 "DEPRECATEDIN_1_1_0",
 			 "DEPRECATEDIN_1_2_0",
+                         # APPLINK isn't really an algorithm, but there's still
+                         # a OPENSSL_USE_APPLINK used, so we swallow this to
+                         # avoid getting annoyed by a warning
+                         "APPLINK",
                      );
 
 # %disabled comes from configdata.pm
@@ -186,6 +194,8 @@ foreach (@ARGV, split(/ /, $config{options}))
 		$zlib = 1;
 	}
 
+	$do_algorithms=1 if $_ eq "libosslalgos" || $_ eq "algorithms";
+	$do_compat=1 if $_ eq "libosslcompat" || $_ eq "compat";
 	$do_crypto=1 if $_ eq "libcrypto" || $_ eq "crypto";
 	$do_ssl=1 if $_ eq "libssl" || $_ eq "ssl";
 
@@ -195,6 +205,8 @@ foreach (@ARGV, split(/ /, $config{options}))
 	$do_ctestall=1 if $_ eq "ctestall";
 	$do_checkexist=1 if $_ eq "exist";
 	}
+$libname = $unified_info{sharednames}->{libosslalgos} if $do_algorithms;
+$libname = $unified_info{sharednames}->{libosslcompat} if $do_compat;
 $libname = $unified_info{sharednames}->{libcrypto} if $do_crypto;
 $libname = $unified_info{sharednames}->{libssl} if $do_ssl;
 
@@ -205,6 +217,12 @@ if (!$libname) {
 	if ($do_crypto) {
 		$libname="LIBCRYPTO";
 	}
+	if ($do_algorithms) {
+		$libname="LIBOSSLALGOS";
+	}
+	if ($do_compat) {
+		$libname="LIBOSSLCOMPAT";
+	}
 }
 
 # If no platform is given, assume WIN32
@@ -214,9 +232,9 @@ if ($W32 + $VMS + $linux + $aix == 0) {
 die "Please, only one platform at a time"
     if ($W32 + $VMS + $linux + $aix > 1);
 
-if (!$do_ssl && !$do_crypto)
+if (!$do_ssl && !$do_crypto && !$do_algorithms && !$do_compat)
 	{
-	print STDERR "usage: $0 ( ssl | crypto ) [ 16 | 32 | NT | OS2 | linux | VMS ]\n";
+	print STDERR "usage: $0 ( ssl | crypto | algorithms | compat ) [ 16 | 32 | NT | OS2 | linux | VMS ]\n";
 	exit(1);
 	}
 
@@ -224,6 +242,10 @@ if (!$do_ssl && !$do_crypto)
 $max_ssl = $max_num;
 %crypto_list=&load_numbers($crypto_num);
 $max_crypto = $max_num;
+%algorithms_list=&load_numbers($algorithms_num);
+$max_algorithms = $max_num;
+%compat_list=&load_numbers($compat_num);
+$max_compat = $max_num;
 
 my $ssl="include/openssl/ssl.h";
 $ssl.=" include/openssl/sslerr.h";
@@ -239,11 +261,26 @@ $skipthese{'include/openssl/conf_api.h'} = 1;
 $skipthese{'include/openssl/ebcdic.h'} = 1;
 $skipthese{'include/openssl/opensslconf.h'} = 1;
 
+my $compat =
+    join(' ',
+         map { "include/openssl/$_" }
+             qw(aes.h blowfish.h camellia.h cast.h cmac.h des.h
+                dh.h dherr.h dsa.h dsaerr.h ecdh.h ecdsa.h ec.h ecerr.h
+                hmac.h idea.h kdf.h kdferr.h md2.h md4.h md5.h mdc2.h modes.h
+                rc2.h rc4.h rc5.h ripemd.h rsa.h rsaerr.h seed.h sha.h
+                whrlpool.h));
+foreach (split(/\s+/, $compat)) {
+    $skipthese{$_} = 1;
+}
+
 # We use headers found in include/openssl and include/internal only.
 # The latter is needed so libssl.so/.dll/.exe can link properly.
 my $crypto ="include/internal/dso.h";
+$crypto.=" include/internal/cryptlib.h";
+$crypto.=" include/internal/evp.h";
 $crypto.=" include/internal/o_dir.h";
 $crypto.=" include/internal/o_str.h";
+$crypto.=" include/internal/bn.h";
 $crypto.=" include/internal/err.h";
 $crypto.=" include/internal/sslconf.h";
 foreach my $f ( glob(catfile($config{sourcedir},'include/openssl/*.h')) ) {
@@ -255,6 +292,13 @@ my $symhacks="include/openssl/symhacks.h";
 
 my @ssl_symbols = &do_defs("LIBSSL", $ssl, $symhacks);
 my @crypto_symbols = &do_defs("LIBCRYPTO", $crypto, $symhacks);
+my @algorithms_symbols = (
+    'openssl_add_all_ameths_int\EXIST::FUNCTION:',
+    'openssl_add_all_pmeths_int\EXIST::FUNCTION:',
+    'openssl_add_all_ciphers_int\EXIST::FUNCTION:',
+    'openssl_add_all_digests_int\EXIST::FUNCTION:',
+   );
+my @compat_symbols = &do_defs("LIBOSSLCOMPAT", $compat, $symhacks);
 
 if ($do_update) {
 
@@ -284,11 +328,41 @@ if($do_crypto == 1) {
 	close OUT;
 }
 
+if($do_algorithms == 1) {
+
+	&maybe_add_info("LIBOSSLALGOS",*algorithms_list,@algorithms_symbols);
+	if ($do_rewrite == 1) {
+		open(OUT, ">$algorithms_num");
+		&rewrite_numbers(*OUT,"LIBOSSLALGOS",*algorithms_list,@algorithms_symbols);
+	} else {
+		open(OUT, ">>$algorithms_num");
+	}
+	&update_numbers(*OUT,"LIBOSSLALGOS",*algorithms_list,$max_algorithms,@algorithms_symbols);
+	close OUT;
+}
+
+if($do_compat == 1) {
+
+	&maybe_add_info("LIBOSSLCOMPAT",*compat_list,@compat_symbols);
+	if ($do_rewrite == 1) {
+		open(OUT, ">$compat_num");
+		&rewrite_numbers(*OUT,"LIBOSSLCOMPAT",*compat_list,@compat_symbols);
+	} else {
+		open(OUT, ">>$compat_num");
+	}
+	&update_numbers(*OUT,"LIBOSSLCOMPAT",*compat_list,$max_compat,@compat_symbols);
+	close OUT;
+}
+
 } elsif ($do_checkexist) {
 	&check_existing(*ssl_list, @ssl_symbols)
 		if $do_ssl == 1;
 	&check_existing(*crypto_list, @crypto_symbols)
 		if $do_crypto == 1;
+	&check_existing(*algorithms_list, @algorithms_symbols)
+		if $do_algorithms == 1;
+	&check_existing(*compat_list, @compat_symbols)
+		if $do_compat == 1;
 } elsif ($do_ctest || $do_ctestall) {
 
 	print <<"EOF";
@@ -306,6 +380,12 @@ EOF
 	&print_test_file(*STDOUT,"LIBCRYPTO",*crypto_list,$do_ctestall,@crypto_symbols)
 		if $do_crypto == 1;
 
+	&print_test_file(*STDOUT,"LIBOSSLALGOS",*algorithms_list,$do_ctestall,@algorithms_symbols)
+		if $do_algorithms == 1;
+
+	&print_test_file(*STDOUT,"LIBOSSLCOMPAT",*compat_list,$do_ctestall,@compat_symbols)
+		if $do_compat == 1;
+
 	print "}\n";
 
 } else {
@@ -315,6 +395,12 @@ EOF
 
 	&print_def_file(*STDOUT,$libname,*crypto_list,@crypto_symbols)
 		if $do_crypto == 1;
+
+	&print_def_file(*STDOUT,$libname,*algorithms_list,@algorithms_symbols)
+		if $do_algorithms == 1;
+
+	&print_def_file(*STDOUT,$libname,*compat_list,@compat_symbols)
+		if $do_compat == 1;
 
 }
 
@@ -819,7 +905,7 @@ sub do_defs
 					# Things that are everywhere
 					$def .= "int PEM_read_bio_$1(void);";
 					next;
-				} elsif (/^OPENSSL_DECLARE_GLOBAL\s*\(\s*(\w*)\s*,\s*(\w*)\s*\)/) {
+				} elsif (/^OPENSSL_DECLARE_GLOBAL\s*\(\s*([\w\s]*)\s*,\s*(\w*)\s*\)/) {
 					# Variant for platforms that do not
 					# have to access global variables
 					# in shared libraries through functions
@@ -838,6 +924,38 @@ sub do_defs
 					&$make_variant("_shadow_$2","_shadow_$2",
 						      "EXPORT_VAR_AS_FUNCTION",
 						      "FUNCTION");
+                                        next;
+                                } elsif (/^OPENSSL_DECLARE_GLOBAL/) {
+                                    warn "Undetected OPENSSL_DECLARE_GLOBAL: $_\n";
+                                    warn " regexp results: ",join(' | ', @{^CAPTURE}),"\n";
+				} elsif (/^declare_dh_bn\s*\(\s*(\w*)\s*\)/) {
+					# Variant for platforms that do not
+					# have to access global variables
+					# in shared libraries through functions
+					$def .=
+					    "#INFO:"
+						.join(',',"!EXPORT_VAR_AS_FUNCTION",@current_platforms).":"
+						    .join(',',@current_algorithms).";";
+					$def .= "OPENSSL_EXTERN int _shadow__bignum_dh$1_p;";
+					$def .= "OPENSSL_EXTERN int _shadow__bignum_dh$1_g;";
+					$def .= "OPENSSL_EXTERN int _shadow__bignum_dh$1_q;";
+					$def .=
+					    "#INFO:"
+						.join(',',@current_platforms).":"
+						    .join(',',@current_algorithms).";";
+					# Variant for platforms that have to
+					# access global variables in shared
+					# libraries through functions
+					&$make_variant("_shadow__bignum_dh$1_p","_shadow__bignum_dh$1_p",
+						      "EXPORT_VAR_AS_FUNCTION",
+						      "FUNCTION");
+					&$make_variant("_shadow__bignum_dh$1_g","_shadow__bignum_dh$1_g",
+						      "EXPORT_VAR_AS_FUNCTION",
+						      "FUNCTION");
+					&$make_variant("_shadow__bignum_dh$1_q","_shadow__bignum_dh$1_q",
+						      "EXPORT_VAR_AS_FUNCTION",
+						      "FUNCTION");
+                                        next;
 				} elsif (/^\s*DEPRECATEDIN/) {
 					$parens = count_parens($_);
 					if ($parens == 0) {
