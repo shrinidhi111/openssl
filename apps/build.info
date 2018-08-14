@@ -20,7 +20,7 @@ IF[{- !$disabled{apps} -}]
   SOURCE[openssl]={- join(" ", @apps_init_src) -}
   SOURCE[openssl]={- join(" ", @apps_openssl_src) -}
   INCLUDE[openssl]=.. ../include
-  DEPEND[openssl]=libapps.a ../libssl
+  DEPEND[openssl]=libapps.a ../libosslcompat ../libssl
 
 IF[{- $config{target} =~ /^(?:Cygwin|mingw|VC-)/ -}]
   GENERATE[openssl.rc]=../util/mkrc.pl openssl
