@@ -77,7 +77,9 @@ IF[{- !$disabled{tests} -}]
 
   SOURCE[asn1-test]=asn1.c test-corpus.c
   INCLUDE[asn1-test]=../include
-  DEPEND[asn1-test]=../libcrypto ../libssl
+  ## asn1-test uses algorithms specific _it variables, so must use the defining
+  ## modules, i.e. libosslcompat
+  DEPEND[asn1-test]=../libosslcompat ../libcrypto ../libssl
 
   SOURCE[asn1parse-test]=asn1parse.c test-corpus.c
   INCLUDE[asn1parse-test]=../include
