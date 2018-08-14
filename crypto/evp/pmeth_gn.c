@@ -14,6 +14,7 @@
 #include <openssl/evp.h>
 #include "internal/bn.h"
 #include "internal/asn1_int.h"
+#include "internal/evp.h"
 #include "internal/evp_int.h"
 
 int EVP_PKEY_paramgen_init(EVP_PKEY_CTX *ctx)

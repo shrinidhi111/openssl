@@ -13,6 +13,7 @@
 #include <openssl/x509.h>
 #include <openssl/evp.h>
 #include <openssl/bn.h>
+#include "internal/evp.h"
 #include "internal/evp_int.h"
 #include "dsa_locl.h"
 

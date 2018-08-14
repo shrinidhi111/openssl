@@ -15,6 +15,7 @@
 #include <openssl/rand.h>
 #include <openssl/rand_drbg.h>
 #include <openssl/engine.h>
+#include "internal/evp.h"
 #include "internal/evp_int.h"
 #include "evp_locl.h"
 
@@ -280,7 +281,8 @@ int EVP_DecryptInit_ex(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
 # define PTRDIFF_T size_t
 #endif
 
-int is_partially_overlapping(const void *ptr1, const void *ptr2, int len)
+int openssl_is_partially_overlapping(const void *ptr1, const void *ptr2,
+                                     int len)
 {
     PTRDIFF_T diff = (PTRDIFF_T)ptr1-(PTRDIFF_T)ptr2;
     /*
@@ -306,7 +308,7 @@ int EVP_EncryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
 
     if (ctx->cipher->flags & EVP_CIPH_FLAG_CUSTOM_CIPHER) {
         /* If block size > 1 then the cipher will have to do this check */
-        if (bl == 1 && is_partially_overlapping(out, in, cmpl)) {
+        if (bl == 1 && openssl_is_partially_overlapping(out, in, cmpl)) {
             EVPerr(EVP_F_EVP_ENCRYPTUPDATE, EVP_R_PARTIALLY_OVERLAPPING);
             return 0;
         }
@@ -323,7 +325,7 @@ int EVP_EncryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
         *outl = 0;
         return inl == 0;
     }
-    if (is_partially_overlapping(out + ctx->buf_len, in, cmpl)) {
+    if (openssl_is_partially_overlapping(out + ctx->buf_len, in, cmpl)) {
         EVPerr(EVP_F_EVP_ENCRYPTUPDATE, EVP_R_PARTIALLY_OVERLAPPING);
         return 0;
     }
@@ -432,7 +434,7 @@ int EVP_DecryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
         cmpl = (cmpl + 7) / 8;
 
     if (ctx->cipher->flags & EVP_CIPH_FLAG_CUSTOM_CIPHER) {
-        if (b == 1 && is_partially_overlapping(out, in, cmpl)) {
+        if (b == 1 && openssl_is_partially_overlapping(out, in, cmpl)) {
             EVPerr(EVP_F_EVP_DECRYPTUPDATE, EVP_R_PARTIALLY_OVERLAPPING);
             return 0;
         }
@@ -459,7 +461,7 @@ int EVP_DecryptUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl,
     if (ctx->final_used) {
         /* see comment about PTRDIFF_T comparison above */
         if (((PTRDIFF_T)out == (PTRDIFF_T)in)
-            || is_partially_overlapping(out, in, b)) {
+            || openssl_is_partially_overlapping(out, in, b)) {
             EVPerr(EVP_F_EVP_DECRYPTUPDATE, EVP_R_PARTIALLY_OVERLAPPING);
             return 0;
         }

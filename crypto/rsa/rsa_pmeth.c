@@ -16,6 +16,7 @@
 #include <openssl/evp.h>
 #include <openssl/x509v3.h>
 #include <openssl/cms.h>
+#include "internal/evp.h"
 #include "internal/evp_int.h"
 #include "rsa_locl.h"
 
