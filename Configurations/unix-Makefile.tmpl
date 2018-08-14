@@ -806,6 +806,8 @@ errors:
           done )
 
 ordinals:
+	( b=`pwd`; cd $(SRCDIR); $(PERL) -I$$b util/mkdef.pl algorithms update )
+	( b=`pwd`; cd $(SRCDIR); $(PERL) -I$$b util/mkdef.pl compat update )
 	( b=`pwd`; cd $(SRCDIR); $(PERL) -I$$b util/mkdef.pl crypto update )
 	( b=`pwd`; cd $(SRCDIR); $(PERL) -I$$b util/mkdef.pl ssl update )
 

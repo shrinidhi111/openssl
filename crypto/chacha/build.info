@@ -1,5 +1,5 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]={- $target{chacha_asm_src} -}
+LIBS=../../libosslalgos
+SOURCE[../../libosslalgos]={- $target{chacha_asm_src} -}
 
 GENERATE[chacha-x86.s]=asm/chacha-x86.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS) $(PROCESSOR)

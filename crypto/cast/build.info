@@ -1,6 +1,12 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        c_skey.c c_ecb.c {- $target{cast_asm_src} -} c_cfb64.c c_ofb64.c
+{- our @source = (
+       qw( c_skey.c c_ecb.c ),
+       split(/\s+/, $target{cast_asm_src}),
+       qw( c_cfb64.c c_ofb64.c ),
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[cast-586.s]=asm/cast-586.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS) $(PROCESSOR)

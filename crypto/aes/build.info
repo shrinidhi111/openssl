@@ -1,7 +1,12 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        aes_misc.c aes_ecb.c aes_cfb.c aes_ofb.c \
-        aes_ige.c aes_wrap.c {- $target{aes_asm_src} -}
+{- our @source = (
+       qw(aes_misc.c aes_ecb.c aes_cfb.c aes_ofb.c
+          aes_ige.c aes_wrap.c),
+       split(/\s+/, $target{aes_asm_src})
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[aes-ia64.s]=asm/aes-ia64.S
 

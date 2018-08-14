@@ -1,5 +1,5 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
+LIBS=../../libosslalgos
+SOURCE[../../libosslalgos]=\
         poly1305_pmeth.c \
         poly1305_ameth.c \
         poly1305.c {- $target{poly1305_asm_src} -}

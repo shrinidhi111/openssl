@@ -1,7 +1,11 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        cmll_ecb.c cmll_ofb.c cmll_cfb.c cmll_ctr.c \
-        {- $target{cmll_asm_src} -}
+{- our @source = (
+       qw( cmll_ecb.c cmll_ofb.c cmll_cfb.c cmll_ctr.c ),
+       split(/\s+/, $target{cmll_asm_src}),
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[cmll-x86.s]=asm/cmll-x86.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS) \

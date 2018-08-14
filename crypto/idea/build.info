@@ -1,3 +1,7 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        i_cbc.c i_cfb64.c i_ofb64.c i_ecb.c i_skey.c
+{- our @source = (
+       qw( i_cbc.c i_cfb64.c i_ofb64.c i_ecb.c i_skey.c ),
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}

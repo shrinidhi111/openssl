@@ -86,23 +86,6 @@ DEFINE_STACK_OF_CONST(EVP_PKEY_METHOD)
 void evp_pkey_set_cb_translate(BN_GENCB *cb, EVP_PKEY_CTX *ctx);
 
 extern const EVP_PKEY_METHOD cmac_pkey_meth;
-extern const EVP_PKEY_METHOD dh_pkey_meth;
-extern const EVP_PKEY_METHOD dhx_pkey_meth;
-extern const EVP_PKEY_METHOD dsa_pkey_meth;
-extern const EVP_PKEY_METHOD ec_pkey_meth;
-extern const EVP_PKEY_METHOD sm2_pkey_meth;
-extern const EVP_PKEY_METHOD ecx25519_pkey_meth;
-extern const EVP_PKEY_METHOD ecx448_pkey_meth;
-extern const EVP_PKEY_METHOD ed25519_pkey_meth;
-extern const EVP_PKEY_METHOD ed448_pkey_meth;
-extern const EVP_PKEY_METHOD hmac_pkey_meth;
-extern const EVP_PKEY_METHOD rsa_pkey_meth;
-extern const EVP_PKEY_METHOD rsa_pss_pkey_meth;
-extern const EVP_PKEY_METHOD scrypt_pkey_meth;
-extern const EVP_PKEY_METHOD tls1_prf_pkey_meth;
-extern const EVP_PKEY_METHOD hkdf_pkey_meth;
-extern const EVP_PKEY_METHOD poly1305_pkey_meth;
-extern const EVP_PKEY_METHOD siphash_pkey_meth;
 
 struct evp_md_st {
     int type;
@@ -412,7 +395,9 @@ struct evp_pkey_st {
     CRYPTO_RWLOCK *lock;
 } /* EVP_PKEY */ ;
 
-
+void openssl_init_algorithms(void);
+void openssl_add_all_ameths_int(void);
+void openssl_add_all_pmeths_int(void);
 void openssl_add_all_ciphers_int(void);
 void openssl_add_all_digests_int(void);
 void evp_cleanup_int(void);

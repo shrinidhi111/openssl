@@ -1,5 +1,5 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
+LIBS=../../libosslalgos
+SOURCE[../../libosslalgos]=\
         rmd_dgst.c rmd_one.c {- $target{rmd160_asm_src} -}
 
 GENERATE[rmd-586.s]=asm/rmd-586.pl \

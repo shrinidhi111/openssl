@@ -1,4 +1,4 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]=\
         sm4.c
 

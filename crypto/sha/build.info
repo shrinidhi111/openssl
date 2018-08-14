@@ -1,7 +1,12 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        sha1dgst.c sha1_one.c sha256.c sha512.c {- $target{sha1_asm_src} -} \
-        {- $target{keccak1600_asm_src} -}
+{- our @source = (
+       qw( sha1dgst.c sha1_one.c sha256.c sha512.c ),
+       split(/\s+/, $target{sha1_asm_src}),
+       split(/\s+/, $target{keccak1600_asm_src}),
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[sha1-586.s]=asm/sha1-586.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS) $(PROCESSOR)

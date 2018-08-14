@@ -1,6 +1,10 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        {- $target{rc4_asm_src} -}
+{- our @source = (
+       split(/\s+/, $target{rc4_asm_src}),
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[rc4-586.s]=asm/rc4-586.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS) $(PROCESSOR)

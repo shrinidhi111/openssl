@@ -1,6 +1,11 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=\
-        md5_dgst.c md5_one.c {- $target{md5_asm_src} -}
+{- our @source = (
+       qw( md5_dgst.c md5_one.c ),
+       split(/\s+/, $target{md5_asm_src}),
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[md5-586.s]=asm/md5-586.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS)

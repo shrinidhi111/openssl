@@ -1,5 +1,11 @@
-LIBS=../../libcrypto
-SOURCE[../../libcrypto]=wp_dgst.c {- $target{wp_asm_src} -}
+{- our @source = (
+       qw(wp_dgst.c),
+       split(/\s+/, $target{wp_asm_src})
+   );
+   "" -}
+LIBS=../../libosslalgos ../../libosslcompat
+SOURCE[../../libosslalgos]={- join(' ', @source) -}
+SOURCE[../../libosslcompat]={- join(' ', @source) -}
 
 GENERATE[wp-mmx.s]=asm/wp-mmx.pl \
         $(PERLASM_SCHEME) $(LIB_CFLAGS) $(LIB_CPPFLAGS) $(PROCESSOR)
