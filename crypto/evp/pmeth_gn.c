@@ -12,7 +12,7 @@
 #include "internal/cryptlib.h"
 #include <openssl/objects.h>
 #include <openssl/evp.h>
-#include "internal/bn_int.h"
+#include "internal/bn.h"
 #include "internal/asn1_int.h"
 #include "internal/evp_int.h"
 

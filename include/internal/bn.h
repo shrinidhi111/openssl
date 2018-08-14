@@ -10,6 +10,7 @@
 #ifndef HEADER_BN_INT_H
 # define HEADER_BN_INT_H
 
+# include <openssl/e_os2.h>
 # include <openssl/bn.h>
 # include <limits.h>
 
@@ -73,5 +74,22 @@ int bn_to_mont_fixed_top(BIGNUM *r, const BIGNUM *a, BN_MONT_CTX *mont,
                          BN_CTX *ctx);
 int bn_mod_add_fixed_top(BIGNUM *r, const BIGNUM *a, const BIGNUM *b,
                          const BIGNUM *m);
+
+/* special numbers for DH */
+#define declare_dh_bn(x) \
+    OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_dh##x##_p);     \
+    OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_dh##x##_g);     \
+    OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_dh##x##_q)
+
+declare_dh_bn(1024_160);
+declare_dh_bn(2048_224);
+declare_dh_bn(2048_256);
+
+OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_ffdhe2048_p);
+OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_ffdhe3072_p);
+OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_ffdhe4096_p);
+OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_ffdhe6144_p);
+OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_ffdhe8192_p);
+OPENSSL_DECLARE_GLOBAL(const BIGNUM, _bignum_const_2);
 
 #endif

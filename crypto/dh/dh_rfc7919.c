@@ -12,7 +12,7 @@
 #include "dh_locl.h"
 #include <openssl/bn.h>
 #include <openssl/objects.h>
-#include "internal/bn_dh.h"
+#include "internal/bn.h"
 
 static DH *dh_param_init(const BIGNUM *p, int32_t nbits)
 {
@@ -20,7 +20,7 @@ static DH *dh_param_init(const BIGNUM *p, int32_t nbits)
     if (dh == NULL)
         return NULL;
     dh->p = (BIGNUM *)p;
-    dh->g = (BIGNUM *)&_bignum_const_2;
+    dh->g = (BIGNUM *)&OPENSSL_GLOBAL_REF(_bignum_const_2);
     dh->length = nbits;
     return dh;
 }
@@ -29,15 +29,15 @@ DH *DH_new_by_nid(int nid)
 {
     switch (nid) {
     case NID_ffdhe2048:
-        return dh_param_init(&_bignum_ffdhe2048_p, 225);
+        return dh_param_init(&OPENSSL_GLOBAL_REF(_bignum_ffdhe2048_p), 225);
     case NID_ffdhe3072:
-        return dh_param_init(&_bignum_ffdhe3072_p, 275);
+        return dh_param_init(&OPENSSL_GLOBAL_REF(_bignum_ffdhe3072_p), 275);
     case NID_ffdhe4096:
-        return dh_param_init(&_bignum_ffdhe4096_p, 325);
+        return dh_param_init(&OPENSSL_GLOBAL_REF(_bignum_ffdhe4096_p), 325);
     case NID_ffdhe6144:
-        return dh_param_init(&_bignum_ffdhe6144_p, 375);
+        return dh_param_init(&OPENSSL_GLOBAL_REF(_bignum_ffdhe6144_p), 375);
     case NID_ffdhe8192:
-        return dh_param_init(&_bignum_ffdhe8192_p, 400);
+        return dh_param_init(&OPENSSL_GLOBAL_REF(_bignum_ffdhe8192_p), 400);
     default:
         DHerr(DH_F_DH_NEW_BY_NID, DH_R_INVALID_PARAMETER_NID);
         return NULL;
@@ -50,15 +50,15 @@ int DH_get_nid(const DH *dh)
 
     if (BN_get_word(dh->g) != 2)
         return NID_undef;
-    if (!BN_cmp(dh->p, &_bignum_ffdhe2048_p))
+    if (!BN_cmp(dh->p, &OPENSSL_GLOBAL_REF(_bignum_ffdhe2048_p)))
         nid = NID_ffdhe2048;
-    else if (!BN_cmp(dh->p, &_bignum_ffdhe3072_p))
+    else if (!BN_cmp(dh->p, &OPENSSL_GLOBAL_REF(_bignum_ffdhe3072_p)))
         nid = NID_ffdhe3072;
-    else if (!BN_cmp(dh->p, &_bignum_ffdhe4096_p))
+    else if (!BN_cmp(dh->p, &OPENSSL_GLOBAL_REF(_bignum_ffdhe4096_p)))
         nid = NID_ffdhe4096;
-    else if (!BN_cmp(dh->p, &_bignum_ffdhe6144_p))
+    else if (!BN_cmp(dh->p, &OPENSSL_GLOBAL_REF(_bignum_ffdhe6144_p)))
         nid = NID_ffdhe6144;
-    else if (!BN_cmp(dh->p, &_bignum_ffdhe8192_p))
+    else if (!BN_cmp(dh->p, &OPENSSL_GLOBAL_REF(_bignum_ffdhe8192_p)))
         nid = NID_ffdhe8192;
     else
         return NID_undef;

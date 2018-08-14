@@ -8,7 +8,7 @@
  */
 
 #include "internal/cryptlib.h"
-#include "internal/bn_int.h"
+#include "internal/bn.h"
 #include "rsa_locl.h"
 
 static int rsa_ossl_public_encrypt(int flen, const unsigned char *from,

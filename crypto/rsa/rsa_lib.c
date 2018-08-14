@@ -11,7 +11,7 @@
 #include <openssl/crypto.h>
 #include "internal/cryptlib.h"
 #include "internal/refcount.h"
-#include "internal/bn_int.h"
+#include "internal/bn.h"
 #include <openssl/engine.h>
 #include <openssl/evp.h>
 #include "internal/evp_int.h"
