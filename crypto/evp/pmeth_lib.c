@@ -44,6 +44,7 @@ const EVP_PKEY_METHOD *EVP_PKEY_meth_find(int type)
 {
     EVP_PKEY_METHOD tmp;
     const EVP_PKEY_METHOD *t = &tmp, **ret;
+
     tmp.pkey_id = type;
     if (app_pkey_methods) {
         int idx;
@@ -318,6 +319,16 @@ void EVP_PKEY_CTX_free(EVP_PKEY_CTX *ctx)
     ENGINE_finish(ctx->engine);
 #endif
     OPENSSL_free(ctx);
+}
+
+int RSA_pkey_ctx_ctrl(EVP_PKEY_CTX *ctx, int optype, int cmd, int p1, void *p2)
+{
+    /* If key type not RSA or RSA-PSS return error */
+    if (ctx != NULL && ctx->pmeth != NULL
+        && ctx->pmeth->pkey_id != EVP_PKEY_RSA
+        && ctx->pmeth->pkey_id != EVP_PKEY_RSA_PSS)
+        return -1;
+     return EVP_PKEY_CTX_ctrl(ctx, -1, optype, cmd, p1, p2);
 }
 
 int EVP_PKEY_CTX_ctrl(EVP_PKEY_CTX *ctx, int keytype, int optype,
