@@ -19,6 +19,7 @@ static const ERR_STRING_DATA RSA_str_functs[] = {
     {ERR_PACK(ERR_LIB_RSA, RSA_F_INT_RSA_VERIFY, 0), "int_rsa_verify"},
     {ERR_PACK(ERR_LIB_RSA, RSA_F_OLD_RSA_PRIV_DECODE, 0),
      "old_rsa_priv_decode"},
+    {ERR_PACK(ERR_LIB_RSA, RSA_F_OLD_RSA_PUB_DECODE, 0), "old_rsa_pub_decode"},
     {ERR_PACK(ERR_LIB_RSA, RSA_F_PKEY_PSS_INIT, 0), "pkey_pss_init"},
     {ERR_PACK(ERR_LIB_RSA, RSA_F_PKEY_RSA_CTRL, 0), "pkey_rsa_ctrl"},
     {ERR_PACK(ERR_LIB_RSA, RSA_F_PKEY_RSA_CTRL_STR, 0), "pkey_rsa_ctrl_str"},

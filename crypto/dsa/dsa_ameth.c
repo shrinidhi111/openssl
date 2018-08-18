@@ -17,6 +17,19 @@
 #include "internal/asn1_int.h"
 #include "internal/evp_int.h"
 
+static int old_dsa_pub_decode(EVP_PKEY *pkey,
+                              const unsigned char **pder, int derlen)
+{
+    DSA *dsa = NULL;
+
+    if ((dsa = d2i_DSAPublicKey(NULL, pder, derlen)) == NULL) {
+        DSAerr(DSA_F_OLD_DSA_PUB_DECODE, ERR_R_DSA_LIB);
+        return 0;
+    }
+    EVP_PKEY_assign(pkey, pkey->ameth->pkey_id, dsa);
+    return 1;
+}
+
 static int dsa_pub_decode(EVP_PKEY *pkey, X509_PUBKEY *pubkey)
 {
     const unsigned char *p, *pm;
@@ -74,6 +87,11 @@ static int dsa_pub_decode(EVP_PKEY *pkey, X509_PUBKEY *pubkey)
 
 }
 
+static int old_dsa_pub_encode(const EVP_PKEY *pkey, unsigned char **pder)
+{
+    return i2d_DSAPublicKey(pkey->pkey, pder);
+}
+
 static int dsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
 {
     DSA *dsa;
@@ -84,7 +102,7 @@ static int dsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
     ASN1_INTEGER *pubint = NULL;
     ASN1_OBJECT *aobj;
 
-    dsa = pkey->pkey.dsa;
+    dsa = pkey->pkey;
     if (pkey->save_parameters && dsa->p && dsa->q && dsa->g) {
         str = ASN1_STRING_new();
         if (str == NULL) {
@@ -206,8 +224,9 @@ static int dsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
     ASN1_INTEGER *prkey = NULL;
     unsigned char *dp = NULL;
     int dplen;
+    const DSA *dsa = pkey->pkey;
 
-    if (!pkey->pkey.dsa || !pkey->pkey.dsa->priv_key) {
+    if (!dsa || !dsa->priv_key) {
         DSAerr(DSA_F_DSA_PRIV_ENCODE, DSA_R_MISSING_PARAMETERS);
         goto err;
     }
@@ -219,7 +238,7 @@ static int dsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
         goto err;
     }
 
-    params->length = i2d_DSAparams(pkey->pkey.dsa, &params->data);
+    params->length = i2d_DSAparams(pkey->pkey, &params->data);
     if (params->length <= 0) {
         DSAerr(DSA_F_DSA_PRIV_ENCODE, ERR_R_MALLOC_FAILURE);
         goto err;
@@ -227,7 +246,7 @@ static int dsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
     params->type = V_ASN1_SEQUENCE;
 
     /* Get private key into integer */
-    prkey = BN_to_ASN1_INTEGER(pkey->pkey.dsa->priv_key, NULL);
+    prkey = BN_to_ASN1_INTEGER(dsa->priv_key, NULL);
 
     if (!prkey) {
         DSAerr(DSA_F_DSA_PRIV_ENCODE, DSA_R_BN_ERROR);
@@ -254,23 +273,23 @@ static int dsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
 
 static int int_dsa_size(const EVP_PKEY *pkey)
 {
-    return DSA_size(pkey->pkey.dsa);
+    return DSA_size(pkey->pkey);
 }
 
 static int dsa_bits(const EVP_PKEY *pkey)
 {
-    return DSA_bits(pkey->pkey.dsa);
+    return DSA_bits(pkey->pkey);
 }
 
 static int dsa_security_bits(const EVP_PKEY *pkey)
 {
-    return DSA_security_bits(pkey->pkey.dsa);
+    return DSA_security_bits(pkey->pkey);
 }
 
 static int dsa_missing_parameters(const EVP_PKEY *pkey)
 {
     DSA *dsa;
-    dsa = pkey->pkey.dsa;
+    dsa = pkey->pkey;
     if (dsa == NULL || dsa->p == NULL || dsa->q == NULL || dsa->g == NULL)
         return 1;
     return 0;
@@ -279,35 +298,41 @@ static int dsa_missing_parameters(const EVP_PKEY *pkey)
 static int dsa_copy_parameters(EVP_PKEY *to, const EVP_PKEY *from)
 {
     BIGNUM *a;
+    DSA *dsa_to, *dsa_from;
 
-    if (to->pkey.dsa == NULL) {
-        to->pkey.dsa = DSA_new();
-        if (to->pkey.dsa == NULL)
+    if (to->pkey == NULL) {
+        to->pkey = DSA_new();
+        if (to->pkey == NULL)
             return 0;
     }
 
-    if ((a = BN_dup(from->pkey.dsa->p)) == NULL)
-        return 0;
-    BN_free(to->pkey.dsa->p);
-    to->pkey.dsa->p = a;
+    dsa_to = to->pkey;
+    dsa_from = from->pkey;
 
-    if ((a = BN_dup(from->pkey.dsa->q)) == NULL)
+    if ((a = BN_dup(dsa_from->p)) == NULL)
         return 0;
-    BN_free(to->pkey.dsa->q);
-    to->pkey.dsa->q = a;
+    BN_free(dsa_to->p);
+    dsa_to->p = a;
 
-    if ((a = BN_dup(from->pkey.dsa->g)) == NULL)
+    if ((a = BN_dup(dsa_from->q)) == NULL)
         return 0;
-    BN_free(to->pkey.dsa->g);
-    to->pkey.dsa->g = a;
+    BN_free(dsa_to->q);
+    dsa_to->q = a;
+
+    if ((a = BN_dup(dsa_from->g)) == NULL)
+        return 0;
+    BN_free(dsa_to->g);
+    dsa_to->g = a;
     return 1;
 }
 
 static int dsa_cmp_parameters(const EVP_PKEY *a, const EVP_PKEY *b)
 {
-    if (BN_cmp(a->pkey.dsa->p, b->pkey.dsa->p) ||
-        BN_cmp(a->pkey.dsa->q, b->pkey.dsa->q) ||
-        BN_cmp(a->pkey.dsa->g, b->pkey.dsa->g))
+    const DSA *dsa_a = a->pkey, *dsa_b = b->pkey;
+
+    if (BN_cmp(dsa_a->p, dsa_b->p) ||
+        BN_cmp(dsa_a->q, dsa_b->q) ||
+        BN_cmp(dsa_a->g, dsa_b->g))
         return 0;
     else
         return 1;
@@ -315,7 +340,9 @@ static int dsa_cmp_parameters(const EVP_PKEY *a, const EVP_PKEY *b)
 
 static int dsa_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 {
-    if (BN_cmp(b->pkey.dsa->pub_key, a->pkey.dsa->pub_key) != 0)
+    const DSA *dsa_a = a->pkey, *dsa_b = b->pkey;
+
+    if (BN_cmp(dsa_b->pub_key, dsa_a->pub_key) != 0)
         return 0;
     else
         return 1;
@@ -323,7 +350,7 @@ static int dsa_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 
 static void int_dsa_free(EVP_PKEY *pkey)
 {
-    DSA_free(pkey->pkey.dsa);
+    DSA_free(pkey->pkey);
 }
 
 static int do_dsa_print(BIO *bp, const DSA *x, int off, int ptype)
@@ -387,25 +414,25 @@ static int dsa_param_decode(EVP_PKEY *pkey,
 
 static int dsa_param_encode(const EVP_PKEY *pkey, unsigned char **pder)
 {
-    return i2d_DSAparams(pkey->pkey.dsa, pder);
+    return i2d_DSAparams(pkey->pkey, pder);
 }
 
 static int dsa_param_print(BIO *bp, const EVP_PKEY *pkey, int indent,
                            ASN1_PCTX *ctx)
 {
-    return do_dsa_print(bp, pkey->pkey.dsa, indent, 0);
+    return do_dsa_print(bp, pkey->pkey, indent, 0);
 }
 
 static int dsa_pub_print(BIO *bp, const EVP_PKEY *pkey, int indent,
                          ASN1_PCTX *ctx)
 {
-    return do_dsa_print(bp, pkey->pkey.dsa, indent, 1);
+    return do_dsa_print(bp, pkey->pkey, indent, 1);
 }
 
 static int dsa_priv_print(BIO *bp, const EVP_PKEY *pkey, int indent,
                           ASN1_PCTX *ctx)
 {
-    return do_dsa_print(bp, pkey->pkey.dsa, indent, 2);
+    return do_dsa_print(bp, pkey->pkey, indent, 2);
 }
 
 static int old_dsa_priv_decode(EVP_PKEY *pkey,
@@ -423,7 +450,7 @@ static int old_dsa_priv_decode(EVP_PKEY *pkey,
 
 static int old_dsa_priv_encode(const EVP_PKEY *pkey, unsigned char **pder)
 {
-    return i2d_DSAPrivateKey(pkey->pkey.dsa, pder);
+    return i2d_DSAPrivateKey(pkey->pkey, pder);
 }
 
 static int dsa_sig_print(BIO *bp, const X509_ALGOR *sigalg,
@@ -567,6 +594,8 @@ const EVP_PKEY_ASN1_METHOD dsa_asn1_meths[5] = {
 
      int_dsa_free,
      dsa_pkey_ctrl,
+     old_dsa_pub_decode,
+     old_dsa_pub_encode,
      old_dsa_priv_decode,
      old_dsa_priv_encode}
 };

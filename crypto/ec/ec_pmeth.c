@@ -103,7 +103,7 @@ static int pkey_ec_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen,
     int ret, type;
     unsigned int sltmp;
     EC_PKEY_CTX *dctx = ctx->data;
-    EC_KEY *ec = ctx->pkey->pkey.ec;
+    EC_KEY *ec = ctx->pkey->pkey;
     const int sig_sz = ECDSA_size(ec);
 
     /* ensure cast to size_t is safe */
@@ -136,7 +136,7 @@ static int pkey_ec_verify(EVP_PKEY_CTX *ctx,
 {
     int ret, type;
     EC_PKEY_CTX *dctx = ctx->data;
-    EC_KEY *ec = ctx->pkey->pkey.ec;
+    EC_KEY *ec = ctx->pkey->pkey;
 
     if (dctx->md)
         type = EVP_MD_type(dctx->md);
@@ -161,7 +161,7 @@ static int pkey_ec_derive(EVP_PKEY_CTX *ctx, unsigned char *key, size_t *keylen)
         return 0;
     }
 
-    eckey = dctx->co_key ? dctx->co_key : ctx->pkey->pkey.ec;
+    eckey = dctx->co_key ? dctx->co_key : ctx->pkey->pkey;
 
     if (!key) {
         const EC_GROUP *group;
@@ -169,7 +169,7 @@ static int pkey_ec_derive(EVP_PKEY_CTX *ctx, unsigned char *key, size_t *keylen)
         *keylen = (EC_GROUP_get_degree(group) + 7) / 8;
         return 1;
     }
-    pubkey = EC_KEY_get0_public_key(ctx->peerkey->pkey.ec);
+    pubkey = EC_KEY_get0_public_key(ctx->peerkey->pkey);
 
     /*
      * NB: unlike PKCS#3 DH, if *outlen is less than maximum size this is not
@@ -249,14 +249,14 @@ static int pkey_ec_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)
             if (dctx->cofactor_mode != -1)
                 return dctx->cofactor_mode;
             else {
-                EC_KEY *ec_key = ctx->pkey->pkey.ec;
+                EC_KEY *ec_key = ctx->pkey->pkey;
                 return EC_KEY_get_flags(ec_key) & EC_FLAG_COFACTOR_ECDH ? 1 : 0;
             }
         } else if (p1 < -1 || p1 > 1)
             return -2;
         dctx->cofactor_mode = p1;
         if (p1 != -1) {
-            EC_KEY *ec_key = ctx->pkey->pkey.ec;
+            EC_KEY *ec_key = ctx->pkey->pkey;
             if (!ec_key->group)
                 return -2;
             /* If cofactor is 1 cofactor mode does nothing */
@@ -423,7 +423,7 @@ static int pkey_ec_keygen(EVP_PKEY_CTX *ctx, EVP_PKEY *pkey)
         EC_KEY_free(ec);
         return 0;
     }
-    /* Note: if error is returned, we count on caller to free pkey->pkey.ec */
+    /* Note: if error is returned, we count on caller to free pkey->pkey */
     if (ctx->pkey != NULL)
         ret = EVP_PKEY_copy_parameters(pkey, ctx->pkey);
     else

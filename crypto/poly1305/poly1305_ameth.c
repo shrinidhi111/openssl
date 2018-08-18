@@ -51,7 +51,7 @@ static int poly1305_set_priv_key(EVP_PKEY *pkey, const unsigned char *priv,
 {
     ASN1_OCTET_STRING *os;
 
-    if (pkey->pkey.ptr != NULL || len != POLY1305_KEY_SIZE)
+    if (pkey->pkey != NULL || len != POLY1305_KEY_SIZE)
         return 0;
 
     os = ASN1_OCTET_STRING_new();
@@ -63,14 +63,14 @@ static int poly1305_set_priv_key(EVP_PKEY *pkey, const unsigned char *priv,
         return 0;
     }
 
-    pkey->pkey.ptr = os;
+    pkey->pkey = os;
     return 1;
 }
 
 static int poly1305_get_priv_key(const EVP_PKEY *pkey, unsigned char *priv,
                                  size_t *len)
 {
-    ASN1_OCTET_STRING *os = (ASN1_OCTET_STRING *)pkey->pkey.ptr;
+    ASN1_OCTET_STRING *os = (ASN1_OCTET_STRING *)pkey->pkey;
 
     if (priv == NULL) {
         *len = POLY1305_KEY_SIZE;
@@ -104,6 +104,8 @@ const EVP_PKEY_ASN1_METHOD poly1305_asn1_meth = {
 
     poly1305_key_free,
     poly1305_pkey_ctrl,
+    NULL,
+    NULL,
     NULL,
     NULL,
 

@@ -42,6 +42,10 @@ struct evp_pkey_asn1_method_st {
                       int indent, ASN1_PCTX *pctx);
     void (*pkey_free) (EVP_PKEY *pkey);
     int (*pkey_ctrl) (EVP_PKEY *pkey, int op, long arg1, void *arg2);
+    /* Legacy functions for i2d / d2i of public keys */
+    int (*old_pub_decode) (EVP_PKEY *pkey,
+                           const unsigned char **pder, int derlen);
+    int (*old_pub_encode) (const EVP_PKEY *pkey, unsigned char **pder);
     /* Legacy functions for old PEM */
     int (*old_priv_decode) (EVP_PKEY *pkey,
                             const unsigned char **pder, int derlen);

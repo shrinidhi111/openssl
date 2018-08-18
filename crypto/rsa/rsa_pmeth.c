@@ -126,7 +126,7 @@ static int pkey_rsa_sign(EVP_PKEY_CTX *ctx, unsigned char *sig,
 {
     int ret;
     RSA_PKEY_CTX *rctx = ctx->data;
-    RSA *rsa = ctx->pkey->pkey.rsa;
+    RSA *rsa = ctx->pkey->pkey;
 
     if (rctx->md) {
         if (tbslen != (size_t)EVP_MD_size(rctx->md)) {
@@ -178,7 +178,7 @@ static int pkey_rsa_sign(EVP_PKEY_CTX *ctx, unsigned char *sig,
             return -1;
         }
     } else {
-        ret = RSA_private_encrypt(tbslen, tbs, sig, ctx->pkey->pkey.rsa,
+        ret = RSA_private_encrypt(tbslen, tbs, sig, ctx->pkey->pkey,
                                   rctx->pad_mode);
     }
     if (ret < 0)
@@ -199,7 +199,7 @@ static int pkey_rsa_verifyrecover(EVP_PKEY_CTX *ctx,
             if (!setup_tbuf(rctx, ctx))
                 return -1;
             ret = RSA_public_decrypt(siglen, sig,
-                                     rctx->tbuf, ctx->pkey->pkey.rsa,
+                                     rctx->tbuf, ctx->pkey->pkey,
                                      RSA_X931_PADDING);
             if (ret < 1)
                 return 0;
@@ -220,7 +220,7 @@ static int pkey_rsa_verifyrecover(EVP_PKEY_CTX *ctx,
             size_t sltmp;
             ret = int_rsa_verify(EVP_MD_type(rctx->md),
                                  NULL, 0, rout, &sltmp,
-                                 sig, siglen, ctx->pkey->pkey.rsa);
+                                 sig, siglen, ctx->pkey->pkey);
             if (ret <= 0)
                 return 0;
             ret = sltmp;
@@ -228,7 +228,7 @@ static int pkey_rsa_verifyrecover(EVP_PKEY_CTX *ctx,
             return -1;
         }
     } else {
-        ret = RSA_public_decrypt(siglen, sig, rout, ctx->pkey->pkey.rsa,
+        ret = RSA_public_decrypt(siglen, sig, rout, ctx->pkey->pkey,
                                  rctx->pad_mode);
     }
     if (ret < 0)
@@ -242,7 +242,7 @@ static int pkey_rsa_verify(EVP_PKEY_CTX *ctx,
                            const unsigned char *tbs, size_t tbslen)
 {
     RSA_PKEY_CTX *rctx = ctx->data;
-    RSA *rsa = ctx->pkey->pkey.rsa;
+    RSA *rsa = ctx->pkey->pkey;
     size_t rslen;
 
     if (rctx->md) {
@@ -297,7 +297,7 @@ static int pkey_rsa_encrypt(EVP_PKEY_CTX *ctx,
     RSA_PKEY_CTX *rctx = ctx->data;
 
     if (rctx->pad_mode == RSA_PKCS1_OAEP_PADDING) {
-        int klen = RSA_size(ctx->pkey->pkey.rsa);
+        int klen = RSA_size(ctx->pkey->pkey);
         if (!setup_tbuf(rctx, ctx))
             return -1;
         if (!RSA_padding_add_PKCS1_OAEP_mgf1(rctx->tbuf, klen,
@@ -307,9 +307,9 @@ static int pkey_rsa_encrypt(EVP_PKEY_CTX *ctx,
                                              rctx->md, rctx->mgf1md))
             return -1;
         ret = RSA_public_encrypt(klen, rctx->tbuf, out,
-                                 ctx->pkey->pkey.rsa, RSA_NO_PADDING);
+                                 ctx->pkey->pkey, RSA_NO_PADDING);
     } else {
-        ret = RSA_public_encrypt(inlen, in, out, ctx->pkey->pkey.rsa,
+        ret = RSA_public_encrypt(inlen, in, out, ctx->pkey->pkey,
                                  rctx->pad_mode);
     }
     if (ret < 0)
@@ -329,7 +329,7 @@ static int pkey_rsa_decrypt(EVP_PKEY_CTX *ctx,
         if (!setup_tbuf(rctx, ctx))
             return -1;
         ret = RSA_private_decrypt(inlen, in, rctx->tbuf,
-                                  ctx->pkey->pkey.rsa, RSA_NO_PADDING);
+                                  ctx->pkey->pkey, RSA_NO_PADDING);
         if (ret <= 0)
             return ret;
         ret = RSA_padding_check_PKCS1_OAEP_mgf1(out, ret, rctx->tbuf,
@@ -338,7 +338,7 @@ static int pkey_rsa_decrypt(EVP_PKEY_CTX *ctx,
                                                 rctx->oaep_labellen,
                                                 rctx->md, rctx->mgf1md);
     } else {
-        ret = RSA_private_decrypt(inlen, in, out, ctx->pkey->pkey.rsa,
+        ret = RSA_private_decrypt(inlen, in, out, ctx->pkey->pkey,
                                   rctx->pad_mode);
     }
     if (ret < 0)
@@ -805,7 +805,7 @@ static int pkey_pss_init(EVP_PKEY_CTX *ctx)
     /* Should never happen */
     if (!pkey_ctx_is_pss(ctx))
         return 0;
-    rsa = ctx->pkey->pkey.rsa;
+    rsa = ctx->pkey->pkey;
     /* If no restrictions just return */
     if (rsa->pss == NULL)
         return 1;

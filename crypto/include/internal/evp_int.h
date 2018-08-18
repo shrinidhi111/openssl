@@ -372,6 +372,8 @@ struct evp_pkey_st {
     const EVP_PKEY_ASN1_METHOD *ameth;
     ENGINE *engine;
     ENGINE *pmeth_engine; /* If not NULL public key ENGINE to use */
+    void *pkey;
+#if 0
     union {
         void *ptr;
 # ifndef OPENSSL_NO_RSA
@@ -388,6 +390,7 @@ struct evp_pkey_st {
         ECX_KEY *ecx;           /* X25519, X448, Ed25519, Ed448 */
 # endif
     } pkey;
+#endif
     int save_parameters;
     STACK_OF(X509_ATTRIBUTE) *attributes; /* [ 0 ] */
     CRYPTO_RWLOCK *lock;

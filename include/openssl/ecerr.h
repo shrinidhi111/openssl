@@ -176,6 +176,7 @@ int ERR_load_EC_strings(void);
 #  define EC_F_NISTP256_PRE_COMP_NEW                       236
 #  define EC_F_NISTP521_PRE_COMP_NEW                       237
 #  define EC_F_O2I_ECPUBLICKEY                             152
+#  define EC_F_OLD_ECKEY_PUB_DECODE                        296
 #  define EC_F_OLD_EC_PRIV_DECODE                          222
 #  define EC_F_OSSL_ECDH_COMPUTE_KEY                       247
 #  define EC_F_OSSL_ECDSA_SIGN_SIG                         249

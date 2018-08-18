@@ -93,7 +93,7 @@ static int int_update(EVP_MD_CTX *ctx, const void *data, size_t count)
 static int poly1305_signctx_init(EVP_PKEY_CTX *ctx, EVP_MD_CTX *mctx)
 {
     POLY1305_PKEY_CTX *pctx = ctx->data;
-    ASN1_OCTET_STRING *key = (ASN1_OCTET_STRING *)ctx->pkey->pkey.ptr;
+    ASN1_OCTET_STRING *key = (ASN1_OCTET_STRING *)ctx->pkey->pkey;
 
     if (key->length != POLY1305_KEY_SIZE)
         return 0;

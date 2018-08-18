@@ -73,8 +73,8 @@ static int pkey_sm2_sign(EVP_PKEY_CTX *ctx, unsigned char *sig, size_t *siglen,
 {
     int ret;
     unsigned int sltmp;
-    EC_KEY *ec = ctx->pkey->pkey.ec;
-    const int sig_sz = ECDSA_size(ctx->pkey->pkey.ec);
+    EC_KEY *ec = ctx->pkey->pkey;
+    const int sig_sz = ECDSA_size(ctx->pkey->pkey);
 
     if (sig_sz <= 0) {
         return 0;
@@ -102,7 +102,7 @@ static int pkey_sm2_verify(EVP_PKEY_CTX *ctx,
                            const unsigned char *sig, size_t siglen,
                            const unsigned char *tbs, size_t tbslen)
 {
-    EC_KEY *ec = ctx->pkey->pkey.ec;
+    EC_KEY *ec = ctx->pkey->pkey;
 
     return sm2_verify(tbs, tbslen, sig, siglen, ec);
 }
@@ -111,7 +111,7 @@ static int pkey_sm2_encrypt(EVP_PKEY_CTX *ctx,
                             unsigned char *out, size_t *outlen,
                             const unsigned char *in, size_t inlen)
 {
-    EC_KEY *ec = ctx->pkey->pkey.ec;
+    EC_KEY *ec = ctx->pkey->pkey;
     SM2_PKEY_CTX *dctx = ctx->data;
     const EVP_MD *md = (dctx->md == NULL) ? EVP_sm3() : dctx->md;
 
@@ -129,7 +129,7 @@ static int pkey_sm2_decrypt(EVP_PKEY_CTX *ctx,
                             unsigned char *out, size_t *outlen,
                             const unsigned char *in, size_t inlen)
 {
-    EC_KEY *ec = ctx->pkey->pkey.ec;
+    EC_KEY *ec = ctx->pkey->pkey;
     SM2_PKEY_CTX *dctx = ctx->data;
     const EVP_MD *md = (dctx->md == NULL) ? EVP_sm3() : dctx->md;
 

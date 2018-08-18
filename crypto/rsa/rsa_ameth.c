@@ -30,7 +30,7 @@ static RSA_PSS_PARAMS *rsa_pss_decode(const X509_ALGOR *alg);
 static int rsa_param_encode(const EVP_PKEY *pkey,
                             ASN1_STRING **pstr, int *pstrtype)
 {
-    const RSA *rsa = pkey->pkey.rsa;
+    const RSA *rsa = pkey->pkey;
 
     *pstr = NULL;
     /* If RSA it's just NULL type */
@@ -72,6 +72,11 @@ static int rsa_param_decode(RSA *rsa, const X509_ALGOR *alg)
     return 1;
 }
 
+static int old_rsa_pub_encode(const EVP_PKEY *pkey, unsigned char **pder)
+{
+    return i2d_RSAPublicKey(pkey->pkey, pder);
+}
+
 static int rsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
 {
     unsigned char *penc = NULL;
@@ -81,7 +86,7 @@ static int rsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
 
     if (!rsa_param_encode(pkey, &str, &strtype))
         return 0;
-    penclen = i2d_RSAPublicKey(pkey->pkey.rsa, &penc);
+    penclen = i2d_RSAPublicKey(pkey->pkey, &penc);
     if (penclen <= 0)
         return 0;
     if (X509_PUBKEY_set0_param(pk, OBJ_nid2obj(pkey->ameth->pkey_id),
@@ -90,6 +95,19 @@ static int rsa_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
 
     OPENSSL_free(penc);
     return 0;
+}
+
+static int old_rsa_pub_decode(EVP_PKEY *pkey,
+                              const unsigned char **pder, int derlen)
+{
+    RSA *rsa = NULL;
+
+    if ((rsa = d2i_RSAPublicKey(NULL, pder, derlen)) == NULL) {
+        RSAerr(RSA_F_OLD_RSA_PUB_DECODE, ERR_R_RSA_LIB);
+        return 0;
+    }
+    EVP_PKEY_assign(pkey, pkey->ameth->pkey_id, rsa);
+    return 1;
 }
 
 static int rsa_pub_decode(EVP_PKEY *pkey, X509_PUBKEY *pubkey)
@@ -115,8 +133,9 @@ static int rsa_pub_decode(EVP_PKEY *pkey, X509_PUBKEY *pubkey)
 
 static int rsa_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 {
-    if (BN_cmp(b->pkey.rsa->n, a->pkey.rsa->n) != 0
-        || BN_cmp(b->pkey.rsa->e, a->pkey.rsa->e) != 0)
+    const RSA *rsa_a = a->pkey, *rsa_b = b->pkey;
+
+    if (BN_cmp(rsa_b->n, rsa_a->n) != 0 || BN_cmp(rsa_b->e, rsa_a->e) != 0)
         return 0;
     return 1;
 }
@@ -136,7 +155,7 @@ static int old_rsa_priv_decode(EVP_PKEY *pkey,
 
 static int old_rsa_priv_encode(const EVP_PKEY *pkey, unsigned char **pder)
 {
-    return i2d_RSAPrivateKey(pkey->pkey.rsa, pder);
+    return i2d_RSAPrivateKey(pkey->pkey, pder);
 }
 
 static int rsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
@@ -148,7 +167,7 @@ static int rsa_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
 
     if (!rsa_param_encode(pkey, &str, &strtype))
         return 0;
-    rklen = i2d_RSAPrivateKey(pkey->pkey.rsa, &rk);
+    rklen = i2d_RSAPrivateKey(pkey->pkey, &rk);
 
     if (rklen <= 0) {
         RSAerr(RSA_F_RSA_PRIV_ENCODE, ERR_R_MALLOC_FAILURE);
@@ -190,22 +209,24 @@ static int rsa_priv_decode(EVP_PKEY *pkey, const PKCS8_PRIV_KEY_INFO *p8)
 
 static int int_rsa_size(const EVP_PKEY *pkey)
 {
-    return RSA_size(pkey->pkey.rsa);
+    return RSA_size(pkey->pkey);
 }
 
 static int rsa_bits(const EVP_PKEY *pkey)
 {
-    return BN_num_bits(pkey->pkey.rsa->n);
+    RSA *rsa = pkey->pkey;
+
+    return BN_num_bits(rsa->n);
 }
 
 static int rsa_security_bits(const EVP_PKEY *pkey)
 {
-    return RSA_security_bits(pkey->pkey.rsa);
+    return RSA_security_bits(pkey->pkey);
 }
 
 static void int_rsa_free(EVP_PKEY *pkey)
 {
-    RSA_free(pkey->pkey.rsa);
+    RSA_free(pkey->pkey);
 }
 
 static X509_ALGOR *rsa_mgf1_decode(X509_ALGOR *alg)
@@ -313,7 +334,7 @@ static int rsa_pss_param_print(BIO *bp, int pss_key, RSA_PSS_PARAMS *pss,
 
 static int pkey_rsa_print(BIO *bp, const EVP_PKEY *pkey, int off, int priv)
 {
-    const RSA *x = pkey->pkey.rsa;
+    const RSA *x = pkey->pkey;
     char *str;
     const char *s;
     int ret = 0, mod_len = 0, ex_primes;
@@ -1024,7 +1045,7 @@ static int rsa_cms_encrypt(CMS_RecipientInfo *ri)
 
 static int rsa_pkey_check(const EVP_PKEY *pkey)
 {
-    return RSA_check_key_ex(pkey->pkey.rsa, NULL);
+    return RSA_check_key_ex(pkey->pkey, NULL);
 }
 
 const EVP_PKEY_ASN1_METHOD rsa_asn1_meths[2] = {
@@ -1054,6 +1075,8 @@ const EVP_PKEY_ASN1_METHOD rsa_asn1_meths[2] = {
      rsa_sig_print,
      int_rsa_free,
      rsa_pkey_ctrl,
+     old_rsa_pub_decode,
+     old_rsa_pub_encode,
      old_rsa_priv_decode,
      old_rsa_priv_encode,
      rsa_item_verify,
@@ -1094,6 +1117,8 @@ const EVP_PKEY_ASN1_METHOD rsa_pss_asn1_meth = {
      rsa_sig_print,
      int_rsa_free,
      rsa_pkey_ctrl,
+     old_rsa_pub_decode,
+     old_rsa_pub_encode,
      0, 0,
      rsa_item_verify,
      rsa_item_sign,

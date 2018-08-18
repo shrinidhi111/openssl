@@ -182,7 +182,7 @@ static int pkey_set_type(EVP_PKEY *pkey, ENGINE *e, int type, const char *str,
     ENGINE **eptr = (e == NULL) ? &e :  NULL;
 
     if (pkey) {
-        if (pkey->pkey.ptr)
+        if (pkey->pkey)
             EVP_PKEY_free_it(pkey);
         /*
          * If key type matches and a method exists then this lookup has
@@ -333,7 +333,7 @@ EVP_PKEY *EVP_PKEY_new_CMAC_key(ENGINE *e, const unsigned char *priv,
         goto err;
     }
 
-    ret->pkey.ptr = cmctx;
+    ret->pkey = cmctx;
     return ret;
 
  err:
@@ -399,13 +399,13 @@ int EVP_PKEY_assign(EVP_PKEY *pkey, int type, void *key)
 {
     if (pkey == NULL || !EVP_PKEY_set_type(pkey, type))
         return 0;
-    pkey->pkey.ptr = key;
+    pkey->pkey = key;
     return (key != NULL);
 }
 
 void *EVP_PKEY_get0(const EVP_PKEY *pkey)
 {
-    return pkey->pkey.ptr;
+    return pkey->pkey;
 }
 
 const unsigned char *EVP_PKEY_get0_hmac(const EVP_PKEY *pkey, size_t *len)
@@ -464,7 +464,7 @@ RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey)
         EVPerr(EVP_F_EVP_PKEY_GET0_RSA, EVP_R_EXPECTING_AN_RSA_KEY);
         return NULL;
     }
-    return pkey->pkey.rsa;
+    return pkey->pkey;
 }
 
 RSA *EVP_PKEY_get1_RSA(EVP_PKEY *pkey)
@@ -491,7 +491,7 @@ DSA *EVP_PKEY_get0_DSA(EVP_PKEY *pkey)
         EVPerr(EVP_F_EVP_PKEY_GET0_DSA, EVP_R_EXPECTING_A_DSA_KEY);
         return NULL;
     }
-    return pkey->pkey.dsa;
+    return pkey->pkey;
 }
 
 DSA *EVP_PKEY_get1_DSA(EVP_PKEY *pkey)
@@ -519,7 +519,7 @@ EC_KEY *EVP_PKEY_get0_EC_KEY(EVP_PKEY *pkey)
         EVPerr(EVP_F_EVP_PKEY_GET0_EC_KEY, EVP_R_EXPECTING_A_EC_KEY);
         return NULL;
     }
-    return pkey->pkey.ec;
+    return pkey->pkey;
 }
 
 EC_KEY *EVP_PKEY_get1_EC_KEY(EVP_PKEY *pkey)
@@ -547,7 +547,7 @@ DH *EVP_PKEY_get0_DH(EVP_PKEY *pkey)
         EVPerr(EVP_F_EVP_PKEY_GET0_DH, EVP_R_EXPECTING_A_DH_KEY);
         return NULL;
     }
-    return pkey->pkey.dh;
+    return pkey->pkey;
 }
 
 DH *EVP_PKEY_get1_DH(EVP_PKEY *pkey)
@@ -608,7 +608,7 @@ static void EVP_PKEY_free_it(EVP_PKEY *x)
     /* internal function; x is never NULL */
     if (x->ameth && x->ameth->pkey_free) {
         x->ameth->pkey_free(x);
-        x->pkey.ptr = NULL;
+        x->pkey = NULL;
     }
 #ifndef OPENSSL_NO_ENGINE
     ENGINE_finish(x->engine);

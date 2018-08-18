@@ -39,7 +39,7 @@ static int i2d_dhp(const EVP_PKEY *pkey, const DH *a, unsigned char **pp)
 
 static void int_dh_free(EVP_PKEY *pkey)
 {
-    DH_free(pkey->pkey.dh);
+    DH_free(pkey->pkey);
 }
 
 static int dh_pub_decode(EVP_PKEY *pkey, X509_PUBKEY *pubkey)
@@ -103,7 +103,7 @@ static int dh_pub_encode(X509_PUBKEY *pk, const EVP_PKEY *pkey)
     ASN1_STRING *str;
     ASN1_INTEGER *pub_key = NULL;
 
-    dh = pkey->pkey.dh;
+    dh = pkey->pkey;
 
     str = ASN1_STRING_new();
     if (str == NULL) {
@@ -213,7 +213,7 @@ static int dh_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
         goto err;
     }
 
-    params->length = i2d_dhp(pkey, pkey->pkey.dh, &params->data);
+    params->length = i2d_dhp(pkey, pkey->pkey, &params->data);
     if (params->length <= 0) {
         DHerr(DH_F_DH_PRIV_ENCODE, ERR_R_MALLOC_FAILURE);
         goto err;
@@ -221,7 +221,10 @@ static int dh_priv_encode(PKCS8_PRIV_KEY_INFO *p8, const EVP_PKEY *pkey)
     params->type = V_ASN1_SEQUENCE;
 
     /* Get private key into integer */
-    prkey = BN_to_ASN1_INTEGER(pkey->pkey.dh->priv_key, NULL);
+    {
+        const DH *dh = pkey->pkey;
+        prkey = BN_to_ASN1_INTEGER(dh->priv_key, NULL);
+    }
 
     if (!prkey) {
         DHerr(DH_F_DH_PRIV_ENCODE, DH_R_BN_ERROR);
@@ -261,7 +264,7 @@ static int dh_param_decode(EVP_PKEY *pkey,
 
 static int dh_param_encode(const EVP_PKEY *pkey, unsigned char **pder)
 {
-    return i2d_dhp(pkey, pkey->pkey.dh, pder);
+    return i2d_dhp(pkey, pkey->pkey, pder);
 }
 
 static int do_dh_print(BIO *bp, const DH *x, int indent, int ptype)
@@ -346,26 +349,30 @@ static int do_dh_print(BIO *bp, const DH *x, int indent, int ptype)
 
 static int int_dh_size(const EVP_PKEY *pkey)
 {
-    return DH_size(pkey->pkey.dh);
+    return DH_size(pkey->pkey);
 }
 
 static int dh_bits(const EVP_PKEY *pkey)
 {
-    return BN_num_bits(pkey->pkey.dh->p);
+    const DH *dh = pkey->pkey;
+
+    return BN_num_bits(dh->p);
 }
 
 static int dh_security_bits(const EVP_PKEY *pkey)
 {
-    return DH_security_bits(pkey->pkey.dh);
+    return DH_security_bits(pkey->pkey);
 }
 
 static int dh_cmp_parameters(const EVP_PKEY *a, const EVP_PKEY *b)
 {
-    if (BN_cmp(a->pkey.dh->p, b->pkey.dh->p) ||
-        BN_cmp(a->pkey.dh->g, b->pkey.dh->g))
+    const DH *dh_a = a->pkey, *dh_b = b->pkey;
+
+    if (BN_cmp(dh_a->p, dh_b->p) ||
+        BN_cmp(dh_a->g, dh_b->g))
         return 0;
     else if (a->ameth == &dhx_asn1_meth) {
-        if (BN_cmp(a->pkey.dh->q, b->pkey.dh->q))
+        if (BN_cmp(dh_a->q, dh_b->q))
             return 0;
     }
     return 1;
@@ -433,27 +440,31 @@ DH *DHparams_dup(DH *dh)
 
 static int dh_copy_parameters(EVP_PKEY *to, const EVP_PKEY *from)
 {
-    if (to->pkey.dh == NULL) {
-        to->pkey.dh = DH_new();
-        if (to->pkey.dh == NULL)
+    if (to->pkey == NULL) {
+        to->pkey = DH_new();
+        if (to->pkey == NULL)
             return 0;
     }
-    return int_dh_param_copy(to->pkey.dh, from->pkey.dh,
+    return int_dh_param_copy(to->pkey, from->pkey,
                              from->ameth == &dhx_asn1_meth);
 }
 
 static int dh_missing_parameters(const EVP_PKEY *a)
 {
-    if (a->pkey.dh == NULL || a->pkey.dh->p == NULL || a->pkey.dh->g == NULL)
+    const DH *dh_a = a->pkey;
+
+    if (dh_a == NULL || dh_a->p == NULL || dh_a->g == NULL)
         return 1;
     return 0;
 }
 
 static int dh_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 {
+    const DH *dh_a = a->pkey, *dh_b = b->pkey;
+
     if (dh_cmp_parameters(a, b) == 0)
         return 0;
-    if (BN_cmp(b->pkey.dh->pub_key, a->pkey.dh->pub_key) != 0)
+    if (BN_cmp(dh_b->pub_key, dh_a->pub_key) != 0)
         return 0;
     else
         return 1;
@@ -462,19 +473,19 @@ static int dh_pub_cmp(const EVP_PKEY *a, const EVP_PKEY *b)
 static int dh_param_print(BIO *bp, const EVP_PKEY *pkey, int indent,
                           ASN1_PCTX *ctx)
 {
-    return do_dh_print(bp, pkey->pkey.dh, indent, 0);
+    return do_dh_print(bp, pkey->pkey, indent, 0);
 }
 
 static int dh_public_print(BIO *bp, const EVP_PKEY *pkey, int indent,
                            ASN1_PCTX *ctx)
 {
-    return do_dh_print(bp, pkey->pkey.dh, indent, 1);
+    return do_dh_print(bp, pkey->pkey, indent, 1);
 }
 
 static int dh_private_print(BIO *bp, const EVP_PKEY *pkey, int indent,
                             ASN1_PCTX *ctx)
 {
-    return do_dh_print(bp, pkey->pkey.dh, indent, 2);
+    return do_dh_print(bp, pkey->pkey, indent, 2);
 }
 
 int DHparams_print(BIO *bp, const DH *x)
@@ -511,7 +522,7 @@ static int dh_pkey_ctrl(EVP_PKEY *pkey, int op, long arg1, void *arg2)
 
 static int dh_pkey_public_check(const EVP_PKEY *pkey)
 {
-    DH *dh = pkey->pkey.dh;
+    DH *dh = pkey->pkey;
 
     if (dh->pub_key == NULL) {
         DHerr(DH_F_DH_PKEY_PUBLIC_CHECK, DH_R_MISSING_PUBKEY);
@@ -523,7 +534,7 @@ static int dh_pkey_public_check(const EVP_PKEY *pkey)
 
 static int dh_pkey_param_check(const EVP_PKEY *pkey)
 {
-    DH *dh = pkey->pkey.dh;
+    DH *dh = pkey->pkey;
 
     return DH_check_ex(dh);
 }
@@ -560,7 +571,7 @@ const EVP_PKEY_ASN1_METHOD dh_asn1_meth = {
     int_dh_free,
     0,
 
-    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
 
     0,
     dh_pkey_public_check,
@@ -599,7 +610,7 @@ const EVP_PKEY_ASN1_METHOD dhx_asn1_meth = {
     int_dh_free,
     dh_pkey_ctrl,
 
-    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
 
     0,
     dh_pkey_public_check,
@@ -634,7 +645,7 @@ static int dh_cms_set_peerkey(EVP_PKEY_CTX *pctx,
     if (pk->type != EVP_PKEY_DHX)
         goto err;
     /* Get parameters from parent key */
-    dhpeer = DHparams_dup(pk->pkey.dh);
+    dhpeer = DHparams_dup(pk->pkey);
     /* We have parameters now set public key */
     plen = ASN1_STRING_length(pubkey);
     p = ASN1_STRING_get0_data(pubkey);
@@ -799,7 +810,8 @@ static int dh_cms_encrypt(CMS_RecipientInfo *ri)
     X509_ALGOR_get0(&aoid, NULL, NULL, talg);
     /* Is everything uninitialised? */
     if (aoid == OBJ_nid2obj(NID_undef)) {
-        ASN1_INTEGER *pubk = BN_to_ASN1_INTEGER(pkey->pkey.dh->pub_key, NULL);
+        const DH *dh = pkey->pkey;
+        ASN1_INTEGER *pubk = BN_to_ASN1_INTEGER(dh->pub_key, NULL);
         if (!pubk)
             goto err;
         /* Set the key */

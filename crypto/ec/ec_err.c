@@ -257,6 +257,8 @@ static const ERR_STRING_DATA EC_str_functs[] = {
     {ERR_PACK(ERR_LIB_EC, EC_F_NISTP521_PRE_COMP_NEW, 0),
      "nistp521_pre_comp_new"},
     {ERR_PACK(ERR_LIB_EC, EC_F_O2I_ECPUBLICKEY, 0), "o2i_ECPublicKey"},
+    {ERR_PACK(ERR_LIB_EC, EC_F_OLD_ECKEY_PUB_DECODE, 0),
+     "old_eckey_pub_decode"},
     {ERR_PACK(ERR_LIB_EC, EC_F_OLD_EC_PRIV_DECODE, 0), "old_ec_priv_decode"},
     {ERR_PACK(ERR_LIB_EC, EC_F_OSSL_ECDH_COMPUTE_KEY, 0),
      "ossl_ecdh_compute_key"},

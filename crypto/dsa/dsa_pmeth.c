@@ -76,7 +76,7 @@ static int pkey_dsa_sign(EVP_PKEY_CTX *ctx, unsigned char *sig,
     int ret;
     unsigned int sltmp;
     DSA_PKEY_CTX *dctx = ctx->data;
-    DSA *dsa = ctx->pkey->pkey.dsa;
+    DSA *dsa = ctx->pkey->pkey;
 
     if (dctx->md != NULL && tbslen != (size_t)EVP_MD_size(dctx->md))
         return 0;
@@ -95,7 +95,7 @@ static int pkey_dsa_verify(EVP_PKEY_CTX *ctx,
 {
     int ret;
     DSA_PKEY_CTX *dctx = ctx->data;
-    DSA *dsa = ctx->pkey->pkey.dsa;
+    DSA *dsa = ctx->pkey->pkey;
 
     if (dctx->md != NULL && tbslen != (size_t)EVP_MD_size(dctx->md))
         return 0;
@@ -237,7 +237,7 @@ static int pkey_dsa_keygen(EVP_PKEY_CTX *ctx, EVP_PKEY *pkey)
     /* Note: if error return, pkey is freed by parent routine */
     if (!EVP_PKEY_copy_parameters(pkey, ctx->pkey))
         return 0;
-    return DSA_generate_key(pkey->pkey.dsa);
+    return DSA_generate_key(pkey->pkey);
 }
 
 const EVP_PKEY_METHOD dsa_pkey_meth = {

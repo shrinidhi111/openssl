@@ -52,7 +52,7 @@ static int siphash_set_priv_key(EVP_PKEY *pkey, const unsigned char *priv,
 {
     ASN1_OCTET_STRING *os;
 
-    if (pkey->pkey.ptr != NULL || len != SIPHASH_KEY_SIZE)
+    if (pkey->pkey != NULL || len != SIPHASH_KEY_SIZE)
         return 0;
 
     os = ASN1_OCTET_STRING_new();
@@ -64,14 +64,14 @@ static int siphash_set_priv_key(EVP_PKEY *pkey, const unsigned char *priv,
         return 0;
     }
 
-    pkey->pkey.ptr = os;
+    pkey->pkey = os;
     return 1;
 }
 
 static int siphash_get_priv_key(const EVP_PKEY *pkey, unsigned char *priv,
                                 size_t *len)
 {
-    ASN1_OCTET_STRING *os = (ASN1_OCTET_STRING *)pkey->pkey.ptr;
+    ASN1_OCTET_STRING *os = (ASN1_OCTET_STRING *)pkey->pkey;
 
     if (priv == NULL) {
         *len = SIPHASH_KEY_SIZE;
@@ -105,6 +105,8 @@ const EVP_PKEY_ASN1_METHOD siphash_asn1_meth = {
 
     siphash_key_free,
     siphash_pkey_ctrl,
+    NULL,
+    NULL,
     NULL,
     NULL,
 

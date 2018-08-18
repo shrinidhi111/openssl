@@ -1178,6 +1178,12 @@ void EVP_PKEY_asn1_set_public(EVP_PKEY_ASN1_METHOD *ameth,
                                                 int indent, ASN1_PCTX *pctx),
                               int (*pkey_size) (const EVP_PKEY *pk),
                               int (*pkey_bits) (const EVP_PKEY *pk));
+void EVP_PKEY_asn1_set_old_public(EVP_PKEY_ASN1_METHOD *ameth,
+                                  int (*pub_decode) (EVP_PKEY *pk,
+                                                     const unsigned char **pder,
+                                                     int derlen),
+                                  int (*pub_encode) (const EVP_PKEY *pk,
+                                                     unsigned char **pder));
 void EVP_PKEY_asn1_set_private(EVP_PKEY_ASN1_METHOD *ameth,
                                int (*priv_decode) (EVP_PKEY *pk,
                                                    const PKCS8_PRIV_KEY_INFO

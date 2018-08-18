@@ -255,6 +255,9 @@ void EVP_PKEY_asn1_copy(EVP_PKEY_ASN1_METHOD *dst,
     dst->priv_encode = src->priv_encode;
     dst->priv_print = src->priv_print;
 
+    dst->old_pub_encode = src->old_pub_encode;
+    dst->old_pub_decode = src->old_pub_decode;
+
     dst->old_priv_encode = src->old_priv_encode;
     dst->old_priv_decode = src->old_priv_decode;
 
@@ -308,6 +311,17 @@ void EVP_PKEY_asn1_set_public(EVP_PKEY_ASN1_METHOD *ameth,
     ameth->pub_print = pub_print;
     ameth->pkey_size = pkey_size;
     ameth->pkey_bits = pkey_bits;
+}
+
+void EVP_PKEY_asn1_set_old_public(EVP_PKEY_ASN1_METHOD *ameth,
+                                  int (*pub_decode) (EVP_PKEY *pk,
+                                                     const unsigned char **pder,
+                                                     int derlen),
+                                  int (*pub_encode) (const EVP_PKEY *pk,
+                                                     unsigned char **pder))
+{
+    ameth->old_pub_decode = pub_decode;
+    ameth->old_pub_encode = pub_encode;
 }
 
 void EVP_PKEY_asn1_set_private(EVP_PKEY_ASN1_METHOD *ameth,

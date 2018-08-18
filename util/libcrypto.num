@@ -4629,3 +4629,4 @@ bn_mod_add_fixed_top                    4566	1_1_1	EXIST::FUNCTION:
 _shadow__bignum_dh2048_256_q            4567	1_1_1	EXIST:!EXPORT_VAR_AS_FUNCTION:VARIABLE:
 _shadow__bignum_dh2048_256_q            4567	1_1_1	EXIST:EXPORT_VAR_AS_FUNCTION:FUNCTION:
 bn_compute_wNAF                         4568	1_1_1	EXIST::FUNCTION:
+EVP_PKEY_asn1_set_old_public            4569	1_1_1	EXIST::FUNCTION:

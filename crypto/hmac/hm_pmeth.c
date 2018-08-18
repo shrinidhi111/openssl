@@ -152,7 +152,7 @@ static int pkey_hmac_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)
         break;
 
     case EVP_PKEY_CTRL_DIGESTINIT:
-        key = (ASN1_OCTET_STRING *)ctx->pkey->pkey.ptr;
+        key = (ASN1_OCTET_STRING *)ctx->pkey->pkey;
         if (!HMAC_Init_ex(hctx->ctx, key->data, key->length, hctx->md,
                           ctx->engine))
             return 0;

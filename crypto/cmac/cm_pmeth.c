@@ -93,8 +93,7 @@ static int pkey_cmac_ctrl(EVP_PKEY_CTX *ctx, int type, int p1, void *p2)
         break;
 
     case EVP_PKEY_CTRL_MD:
-        if (ctx->pkey && !CMAC_CTX_copy(ctx->data,
-                                        (CMAC_CTX *)ctx->pkey->pkey.ptr))
+        if (ctx->pkey && !CMAC_CTX_copy(ctx->data, (CMAC_CTX *)ctx->pkey->pkey))
             return 0;
         if (!CMAC_Init(cmctx, NULL, 0, NULL, NULL))
             return 0;

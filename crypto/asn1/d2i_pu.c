@@ -18,55 +18,36 @@
 #include <openssl/ec.h>
 
 #include "internal/evp_int.h"
+#include "internal/asn1_int.h"
 
 EVP_PKEY *d2i_PublicKey(int type, EVP_PKEY **a, const unsigned char **pp,
                         long length)
 {
     EVP_PKEY *ret;
+    const EVP_PKEY_ASN1_METHOD *meth = EVP_PKEY_asn1_find(NULL, type);
+
+    if (meth == NULL || meth->old_pub_decode == NULL) {
+        ASN1err(ASN1_F_D2I_PUBLICKEY, ASN1_R_UNSUPPORTED_PUBLIC_KEY_TYPE);
+        return NULL;
+    }
 
     if ((a == NULL) || (*a == NULL)) {
         if ((ret = EVP_PKEY_new()) == NULL) {
             ASN1err(ASN1_F_D2I_PUBLICKEY, ERR_R_EVP_LIB);
             return NULL;
         }
-    } else
+    } else {
         ret = *a;
+    }
 
     if (!EVP_PKEY_set_type(ret, type)) {
         ASN1err(ASN1_F_D2I_PUBLICKEY, ERR_R_EVP_LIB);
         goto err;
     }
 
-    switch (EVP_PKEY_id(ret)) {
-#ifndef OPENSSL_NO_RSA
-    case EVP_PKEY_RSA:
-        if ((ret->pkey.rsa = d2i_RSAPublicKey(NULL, pp, length)) == NULL) {
-            ASN1err(ASN1_F_D2I_PUBLICKEY, ERR_R_ASN1_LIB);
-            goto err;
-        }
-        break;
-#endif
-#ifndef OPENSSL_NO_DSA
-    case EVP_PKEY_DSA:
-        /* TMP UGLY CAST */
-        if (!d2i_DSAPublicKey(&ret->pkey.dsa, pp, length)) {
-            ASN1err(ASN1_F_D2I_PUBLICKEY, ERR_R_ASN1_LIB);
-            goto err;
-        }
-        break;
-#endif
-#ifndef OPENSSL_NO_EC
-    case EVP_PKEY_EC:
-        if (!o2i_ECPublicKey(&ret->pkey.ec, pp, length)) {
-            ASN1err(ASN1_F_D2I_PUBLICKEY, ERR_R_ASN1_LIB);
-            goto err;
-        }
-        break;
-#endif
-    default:
-        ASN1err(ASN1_F_D2I_PUBLICKEY, ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE);
+    if (!meth->old_pub_decode(ret, pp, length))
         goto err;
-    }
+
     if (a != NULL)
         (*a) = ret;
     return ret;

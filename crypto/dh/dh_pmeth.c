@@ -415,22 +415,23 @@ static int pkey_dh_keygen(EVP_PKEY_CTX *ctx, EVP_PKEY *pkey)
     /* Note: if error return, pkey is freed by parent routine */
     if (ctx->pkey != NULL && !EVP_PKEY_copy_parameters(pkey, ctx->pkey))
         return 0;
-    return DH_generate_key(pkey->pkey.dh);
+    return DH_generate_key(pkey->pkey);
 }
 
 static int pkey_dh_derive(EVP_PKEY_CTX *ctx, unsigned char *key,
                           size_t *keylen)
 {
     int ret;
-    DH *dh;
+    DH *dh, *peerdh;
     DH_PKEY_CTX *dctx = ctx->data;
     BIGNUM *dhpub;
     if (!ctx->pkey || !ctx->peerkey) {
         DHerr(DH_F_PKEY_DH_DERIVE, DH_R_KEYS_NOT_SET);
         return 0;
     }
-    dh = ctx->pkey->pkey.dh;
-    dhpub = ctx->peerkey->pkey.dh->pub_key;
+    dh = ctx->pkey->pkey;
+    peerdh = ctx->peerkey->pkey;
+    dhpub = peerdh->pub_key;
     if (dctx->kdf_type == EVP_PKEY_DH_KDF_NONE) {
         if (key == NULL) {
             *keylen = DH_size(dh);

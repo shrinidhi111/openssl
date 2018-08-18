@@ -37,6 +37,7 @@ static const ERR_STRING_DATA DSA_str_functs[] = {
     {ERR_PACK(ERR_LIB_DSA, DSA_F_DSA_SIG_NEW, 0), "DSA_SIG_new"},
     {ERR_PACK(ERR_LIB_DSA, DSA_F_OLD_DSA_PRIV_DECODE, 0),
      "old_dsa_priv_decode"},
+    {ERR_PACK(ERR_LIB_DSA, DSA_F_OLD_DSA_PUB_DECODE, 0), "old_dsa_pub_decode"},
     {ERR_PACK(ERR_LIB_DSA, DSA_F_PKEY_DSA_CTRL, 0), "pkey_dsa_ctrl"},
     {ERR_PACK(ERR_LIB_DSA, DSA_F_PKEY_DSA_CTRL_STR, 0), "pkey_dsa_ctrl_str"},
     {ERR_PACK(ERR_LIB_DSA, DSA_F_PKEY_DSA_KEYGEN, 0), "pkey_dsa_keygen"},
