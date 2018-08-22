@@ -70,6 +70,7 @@ struct evp_pkey_asn1_method_st {
 } /* EVP_PKEY_ASN1_METHOD */ ;
 
 DEFINE_STACK_OF_CONST(EVP_PKEY_ASN1_METHOD)
+DEFINE_STACK_OF_CONST(ASN1_ITEM)
 
 extern const EVP_PKEY_ASN1_METHOD cmac_asn1_meth;
 

@@ -397,6 +397,7 @@ struct evp_pkey_st {
 } /* EVP_PKEY */ ;
 
 void openssl_init_algorithms(void);
+void openssl_add_all_asn1_items_int(void);
 void openssl_add_all_ameths_int(void);
 void openssl_add_all_pmeths_int(void);
 void openssl_add_all_ciphers_int(void);
