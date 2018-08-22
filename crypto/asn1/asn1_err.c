@@ -43,6 +43,7 @@ static const ERR_STRING_DATA ASN1_str_functs[] = {
     {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_GET_UINT64, 0), "asn1_get_uint64"},
     {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_I2D_BIO, 0), "ASN1_i2d_bio"},
     {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_I2D_FP, 0), "ASN1_i2d_fp"},
+    {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_ITEM_ADD, 0), "ASN1_ITEM_add"},
     {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_ITEM_D2I_FP, 0), "ASN1_item_d2i_fp"},
     {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_ITEM_DUP, 0), "ASN1_item_dup"},
     {ERR_PACK(ERR_LIB_ASN1, ASN1_F_ASN1_ITEM_EMBED_D2I, 0),
@@ -154,6 +155,8 @@ static const ERR_STRING_DATA ASN1_str_functs[] = {
 
 static const ERR_STRING_DATA ASN1_str_reasons[] = {
     {ERR_PACK(ERR_LIB_ASN1, 0, ASN1_R_ADDING_OBJECT), "adding object"},
+    {ERR_PACK(ERR_LIB_ASN1, 0, ASN1_R_APPLICATION_ASN1_ITEM_ALREADY_REGISTERED),
+    "application asn1 item already registered"},
     {ERR_PACK(ERR_LIB_ASN1, 0, ASN1_R_ASN1_PARSE_ERROR), "asn1 parse error"},
     {ERR_PACK(ERR_LIB_ASN1, 0, ASN1_R_ASN1_SIG_PARSE_ERROR),
     "asn1 sig parse error"},

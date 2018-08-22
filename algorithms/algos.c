@@ -46,6 +46,25 @@ DEFINE_RUN_ONCE_STATIC(do_init_algos)
 #include "algorithms/hkdf_pmeths.h"
 #include <openssl/kdferr.h>
 
+void openssl_add_all_asn1_items_int(void)
+{
+    RUN_ONCE(&init_algos, do_init_algos);
+
+#ifndef OPENSSL_NO_DH
+    ASN1_ITEM_add(ASN1_ITEM_ref(DHparams));
+#endif
+#ifndef OPENSSL_NO_EC
+    ASN1_ITEM_add(ASN1_ITEM_ref(ECPARAMETERS));
+    ASN1_ITEM_add(ASN1_ITEM_ref(ECPKPARAMETERS));
+#endif
+#ifndef OPENSSL_NO_RSA
+    ASN1_ITEM_add(ASN1_ITEM_ref(RSAPrivateKey));
+    ASN1_ITEM_add(ASN1_ITEM_ref(RSAPublicKey));
+    ASN1_ITEM_add(ASN1_ITEM_ref(RSA_OAEP_PARAMS));
+    ASN1_ITEM_add(ASN1_ITEM_ref(RSA_PSS_PARAMS));
+#endif
+}
+
 void openssl_add_all_ameths_int(void)
 {
     RUN_ONCE(&init_algos, do_init_algos);

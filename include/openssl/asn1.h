@@ -879,6 +879,7 @@ int SMIME_text(BIO *in, BIO *out);
 
 const ASN1_ITEM *ASN1_ITEM_lookup(const char *name);
 const ASN1_ITEM *ASN1_ITEM_get(size_t i);
+int ASN1_ITEM_add(const ASN1_ITEM *item);
 
 # ifdef  __cplusplus
 }

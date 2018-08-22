@@ -55,17 +55,10 @@ static ASN1_ITEM_EXP *asn1_item_list[] = {
     ASN1_ITEM_ref(CMS_ReceiptRequest),
 #endif
     ASN1_ITEM_ref(CRL_DIST_POINTS),
-#ifndef OPENSSL_NO_DH
-    ASN1_ITEM_ref(DHparams),
-#endif
     ASN1_ITEM_ref(DIRECTORYSTRING),
     ASN1_ITEM_ref(DISPLAYTEXT),
     ASN1_ITEM_ref(DIST_POINT_NAME),
     ASN1_ITEM_ref(DIST_POINT),
-#ifndef OPENSSL_NO_EC
-    ASN1_ITEM_ref(ECPARAMETERS),
-    ASN1_ITEM_ref(ECPKPARAMETERS),
-#endif
     ASN1_ITEM_ref(EDIPARTYNAME),
     ASN1_ITEM_ref(EXTENDED_KEY_USAGE),
     ASN1_ITEM_ref(GENERAL_NAMES),
@@ -134,12 +127,6 @@ static ASN1_ITEM_EXP *asn1_item_list[] = {
     ASN1_ITEM_ref(POLICY_MAPPING),
     ASN1_ITEM_ref(PROXY_CERT_INFO_EXTENSION),
     ASN1_ITEM_ref(PROXY_POLICY),
-#ifndef OPENSSL_NO_RSA
-    ASN1_ITEM_ref(RSAPrivateKey),
-    ASN1_ITEM_ref(RSAPublicKey),
-    ASN1_ITEM_ref(RSA_OAEP_PARAMS),
-    ASN1_ITEM_ref(RSA_PSS_PARAMS),
-#endif
 #ifndef OPENSSL_NO_SCRYPT
     ASN1_ITEM_ref(SCRYPT_PARAMS),
 #endif

@@ -198,6 +198,24 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_load_crypto_strings)
     return ret;
 }
 
+static CRYPTO_ONCE add_all_asn1_items = CRYPTO_ONCE_STATIC_INIT;
+DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_asn1_items)
+{
+    /*
+     * OPENSSL_NO_AUTOALGINIT is provided here to prevent at compile time
+     * pulling in all the asn1_items during static linking
+     */
+#ifndef OPENSSL_NO_AUTOALGINIT
+# ifdef OPENSSL_INIT_DEBUG
+    fprintf(stderr, "OPENSSL_INIT: ossl_init_add_all_asn1_items: "
+                    "openssl_add_all_ameths_int(), "
+                    "openssl_add_all_pmeths_int()\n");
+# endif
+    openssl_add_all_asn1_items_int();
+#endif
+    return 1;
+}
+
 static CRYPTO_ONCE add_all_pkey_meths = CRYPTO_ONCE_STATIC_INIT;
 DEFINE_RUN_ONCE_STATIC(ossl_init_add_all_pkey_meths)
 {

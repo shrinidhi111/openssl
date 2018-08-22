@@ -45,6 +45,7 @@ int ERR_load_ASN1_strings(void);
 # define ASN1_F_ASN1_GET_UINT64                           225
 # define ASN1_F_ASN1_I2D_BIO                              116
 # define ASN1_F_ASN1_I2D_FP                               117
+# define ASN1_F_ASN1_ITEM_ADD                             143
 # define ASN1_F_ASN1_ITEM_D2I_FP                          206
 # define ASN1_F_ASN1_ITEM_DUP                             191
 # define ASN1_F_ASN1_ITEM_EMBED_D2I                       120
@@ -136,6 +137,7 @@ int ERR_load_ASN1_strings(void);
  * ASN1 reason codes.
  */
 # define ASN1_R_ADDING_OBJECT                             171
+# define ASN1_R_APPLICATION_ASN1_ITEM_ALREADY_REGISTERED  229
 # define ASN1_R_ASN1_PARSE_ERROR                          203
 # define ASN1_R_ASN1_SIG_PARSE_ERROR                      204
 # define ASN1_R_AUX_ERROR                                 100
