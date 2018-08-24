@@ -26,7 +26,7 @@ extern "C" {
 # define SCT_MIN_RSA_BITS 2048
 
 /* All hashes are SHA256 in v1 of Certificate Transparency */
-# define CT_V1_HASHLEN SHA256_DIGEST_LENGTH
+# define CT_V1_HASHLEN 32
 
 typedef enum {
     CT_LOG_ENTRY_TYPE_NOT_SET = -1,

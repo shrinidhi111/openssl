@@ -28,7 +28,7 @@
 #include <openssl/err.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#include <openssl/pem.h>
+#include <openssl/pem-compat.h>
 #include <openssl/pkcs12.h>
 #include <openssl/ui.h>
 #include <openssl/safestack.h>
@@ -117,32 +117,6 @@ int app_init(long mesgwin)
 {
     return 1;
 }
-#endif
-
-int ctx_set_verify_locations(SSL_CTX *ctx, const char *CAfile,
-                             const char *CApath, int noCAfile, int noCApath)
-{
-    if (CAfile == NULL && CApath == NULL) {
-        if (!noCAfile && SSL_CTX_set_default_verify_file(ctx) <= 0)
-            return 0;
-        if (!noCApath && SSL_CTX_set_default_verify_dir(ctx) <= 0)
-            return 0;
-
-        return 1;
-    }
-    return SSL_CTX_load_verify_locations(ctx, CAfile, CApath);
-}
-
-#ifndef OPENSSL_NO_CT
-
-int ctx_set_ctlog_list_file(SSL_CTX *ctx, const char *path)
-{
-    if (path == NULL)
-        return SSL_CTX_set_default_ctlog_list_file(ctx);
-
-    return SSL_CTX_set_ctlog_list_file(ctx, path);
-}
-
 #endif
 
 static unsigned long nmflag = 0;
@@ -758,11 +732,13 @@ EVP_PKEY *load_key(const char *file, int format, int maybe_stdin,
                          &pkey, NULL, NULL))
             goto end;
 #if !defined(OPENSSL_NO_RSA) && !defined(OPENSSL_NO_DSA) && !defined (OPENSSL_NO_RC4)
+# if 0
     } else if (format == FORMAT_MSBLOB) {
         pkey = b2i_PrivateKey_bio(key);
     } else if (format == FORMAT_PVK) {
         pkey = b2i_PVK_bio(key, (pem_password_cb *)password_callback,
                            &cb_data);
+# endif
 #endif
     } else {
         BIO_printf(bio_err, "bad input format specified for key file\n");
@@ -817,6 +793,7 @@ EVP_PKEY *load_pubkey(const char *file, int format, int maybe_stdin,
         goto end;
     if (format == FORMAT_ASN1) {
         pkey = d2i_PUBKEY_bio(key, NULL);
+#if 0
     } else if (format == FORMAT_ASN1RSA) {
 #ifndef OPENSSL_NO_RSA
         RSA *rsa;
@@ -846,14 +823,17 @@ EVP_PKEY *load_pubkey(const char *file, int format, int maybe_stdin,
 #else
         BIO_printf(bio_err, "RSA keys not supported\n");
 #endif
+#endif  /* 0 */
             pkey = NULL;
     } else if (format == FORMAT_PEM) {
         pkey = PEM_read_bio_PUBKEY(key, NULL,
                                    (pem_password_cb *)password_callback,
                                    &cb_data);
 #if !defined(OPENSSL_NO_RSA) && !defined(OPENSSL_NO_DSA)
+# if 0
     } else if (format == FORMAT_MSBLOB) {
         pkey = b2i_PublicKey_bio(key);
+# endif
 #endif
     }
  end:
@@ -2643,37 +2623,6 @@ BIO *bio_open_default(const char *filename, char mode, int format)
 BIO *bio_open_default_quiet(const char *filename, char mode, int format)
 {
     return bio_open_default_(filename, mode, format, 1);
-}
-
-void wait_for_async(SSL *s)
-{
-    /* On Windows select only works for sockets, so we simply don't wait  */
-#ifndef OPENSSL_SYS_WINDOWS
-    int width = 0;
-    fd_set asyncfds;
-    OSSL_ASYNC_FD *fds;
-    size_t numfds;
-    size_t i;
-
-    if (!SSL_get_all_async_fds(s, NULL, &numfds))
-        return;
-    if (numfds == 0)
-        return;
-    fds = app_malloc(sizeof(OSSL_ASYNC_FD) * numfds, "allocate async fds");
-    if (!SSL_get_all_async_fds(s, fds, &numfds)) {
-        OPENSSL_free(fds);
-        return;
-    }
-
-    FD_ZERO(&asyncfds);
-    for (i = 0; i < numfds; i++) {
-        if (width <= (int)fds[i])
-            width = (int)fds[i] + 1;
-        openssl_fdset((int)fds[i], &asyncfds);
-    }
-    select(width, (void *)&asyncfds, NULL, NULL, NULL);
-    OPENSSL_free(fds);
-#endif
 }
 
 /* if OPENSSL_SYS_WINDOWS is defined then so is OPENSSL_SYS_MSDOS */

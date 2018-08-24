@@ -225,7 +225,7 @@ static int cmd_Curves(SSL_CONF_CTX *cctx, const char *value)
 static int cmd_ECDHParameters(SSL_CONF_CTX *cctx, const char *value)
 {
     int rv = 1;
-    EC_KEY *ecdh;
+    EVP_PKEY *pkey;
     int nid;
 
     /* Ignore values supported by 1.0.2 for the automatic selection */
@@ -529,7 +529,7 @@ static int cmd_ClientCAPath(SSL_CONF_CTX *cctx, const char *value)
 static int cmd_DHParameters(SSL_CONF_CTX *cctx, const char *value)
 {
     int rv = 0;
-    DH *dh = NULL;
+    EVP_PKEY *pkey = NULL;
     BIO *in = NULL;
     if (cctx->ctx || cctx->ssl) {
         in = BIO_new(BIO_s_file());
@@ -537,17 +537,21 @@ static int cmd_DHParameters(SSL_CONF_CTX *cctx, const char *value)
             goto end;
         if (BIO_read_filename(in, value) <= 0)
             goto end;
-        dh = PEM_read_bio_DHparams(in, NULL, NULL, NULL);
-        if (dh == NULL)
+        pkey = PEM_read_bio_Parameters(in, NULL, NULL, NULL);
+        if (pkey != NULL && EVP_PKEY_id(pkey) != EVP_PKEY_DH) {
+            EVP_PKEY_free(pkey);
+            pkey = NULL;
+        }
+        if (pkey == NULL)
             goto end;
     } else
         return 1;
     if (cctx->ctx)
-        rv = SSL_CTX_set_tmp_dh(cctx->ctx, dh);
+        rv = SSL_CTX_set_tmp_pkey(cctx->ctx, pkey);
     if (cctx->ssl)
-        rv = SSL_set_tmp_dh(cctx->ssl, dh);
+        rv = SSL_set_tmp_pkey(cctx->ssl, pkey);
  end:
-    DH_free(dh);
+    EVP_PKEY_free(pkey);
     BIO_free(in);
     return rv > 0;
 }

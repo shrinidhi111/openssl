@@ -11,32 +11,12 @@
 #include "internal/cryptlib.h"
 #include <openssl/bio.h>
 #include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/pkcs7.h>
-#include <openssl/pem.h>
+#include <openssl/pem-compat.h>
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
 #include <openssl/dh.h>
+#include <openssl/x509-compat.h>
 
-#ifndef OPENSSL_NO_RSA
-static RSA *pkey_get_rsa(EVP_PKEY *key, RSA **rsa);
-#endif
-#ifndef OPENSSL_NO_DSA
-static DSA *pkey_get_dsa(EVP_PKEY *key, DSA **dsa);
-#endif
-
-#ifndef OPENSSL_NO_EC
-static EC_KEY *pkey_get_eckey(EVP_PKEY *key, EC_KEY **eckey);
-#endif
-
-IMPLEMENT_PEM_rw(X509_REQ, X509_REQ, PEM_STRING_X509_REQ, X509_REQ)
-
-IMPLEMENT_PEM_write(X509_REQ_NEW, X509_REQ, PEM_STRING_X509_REQ_OLD, X509_REQ)
-IMPLEMENT_PEM_rw(X509_CRL, X509_CRL, PEM_STRING_X509_CRL, X509_CRL)
-IMPLEMENT_PEM_rw(PKCS7, PKCS7, PEM_STRING_PKCS7, PKCS7)
-
-IMPLEMENT_PEM_rw(NETSCAPE_CERT_SEQUENCE, NETSCAPE_CERT_SEQUENCE,
-                 PEM_STRING_X509, NETSCAPE_CERT_SEQUENCE)
 #ifndef OPENSSL_NO_RSA
 /*
  * We treat RSA or DSA private keys as a special case. For private keys we
@@ -79,14 +59,9 @@ RSA *PEM_read_RSAPrivateKey(FILE *fp, RSA **rsa, pem_password_cb *cb, void *u)
 
 # endif
 
-IMPLEMENT_PEM_write_cb_const(RSAPrivateKey, RSA, PEM_STRING_RSA,
-                             RSAPrivateKey)
-
-
-IMPLEMENT_PEM_rw_const(RSAPublicKey, RSA, PEM_STRING_RSA_PUBLIC,
-                       RSAPublicKey) IMPLEMENT_PEM_rw(RSA_PUBKEY, RSA,
-                                                      PEM_STRING_PUBLIC,
-                                                      RSA_PUBKEY)
+IMPLEMENT_PEM_write_cb_const(RSAPrivateKey, RSA, PEM_STRING_RSA, RSAPrivateKey)
+IMPLEMENT_PEM_rw_const(RSAPublicKey, RSA, PEM_STRING_RSA_PUBLIC, RSAPublicKey)
+IMPLEMENT_PEM_rw(RSA_PUBKEY, RSA, PEM_STRING_PUBLIC, RSA_PUBKEY)
 #endif
 #ifndef OPENSSL_NO_DSA
 static DSA *pkey_get_dsa(EVP_PKEY *key, DSA **dsa)
@@ -175,7 +150,51 @@ EC_KEY *PEM_read_ECPrivateKey(FILE *fp, EC_KEY **eckey, pem_password_cb *cb,
 
 #ifndef OPENSSL_NO_DH
 
+static DH *pkey_get_dh(EVP_PKEY *key, DH **dh)
+{
+    DH *dtmp = NULL;
+
+    if (!key)
+        return NULL;
+    dtmp = EVP_PKEY_get1_DH(key);
+    EVP_PKEY_free(key);
+    if (!dtmp)
+        return NULL;
+    if (dh) {
+        DH_free(*dh);
+        *dh = dtmp;
+    }
+    return dtmp;
+}
+
 IMPLEMENT_PEM_write_const(DHparams, DH, PEM_STRING_DHPARAMS, DHparams)
     IMPLEMENT_PEM_write_const(DHxparams, DH, PEM_STRING_DHXPARAMS, DHxparams)
+
+
+/* Transparently read in PKCS#3 or X9.42 DH parameters */
+
+DH *PEM_read_bio_DHparams(BIO *bp, DH **x, pem_password_cb *cb, void *u)
+{
+    EVP_PKEY *pktmp;
+    pktmp = PEM_read_bio_Parameters(bp, NULL);
+    return pkey_get_dh(pktmp, x);
+}
+
+# ifndef OPENSSL_NO_STDIO
+DH *PEM_read_DHparams(FILE *fp, DH **x, pem_password_cb *cb, void *u)
+{
+    BIO *b;
+    DH *ret;
+
+    if ((b = BIO_new(BIO_s_file())) == NULL) {
+        PEMerr(PEM_F_PEM_READ_DHPARAMS, ERR_R_BUF_LIB);
+        return 0;
+    }
+    BIO_set_fp(b, fp, BIO_NOCLOSE);
+    ret = PEM_read_bio_DHparams(b, x, cb, u);
+    BIO_free(b);
+    return ret;
+}
+# endif
+
 #endif
-IMPLEMENT_PEM_rw(PUBKEY, EVP_PKEY, PEM_STRING_PUBLIC, PUBKEY)

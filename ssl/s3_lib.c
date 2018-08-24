@@ -3407,6 +3407,17 @@ long ssl3_ctrl(SSL *s, int cmd, long larg, void *parg)
     case SSL_CTRL_GET_FLAGS:
         ret = (int)(s->s3->flags);
         break;
+    case SSL_CTRL_SET_TMP_PKEY:
+        {
+            EVP_PKEY *pkey = (EVP_PKEY *)parg;
+
+            if (pkey == NULL) {
+                SSLerr(SSL_F_SSL3_CTRL, ERR_R_PASSED_NULL_PARAMETER);
+                return ret;
+            }
+            EVP_PKEY_up_ref(pkey);
+            break;
+        }
 #ifndef OPENSSL_NO_DH
     case SSL_CTRL_SET_TMP_DH:
         {

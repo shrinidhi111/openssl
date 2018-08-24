@@ -14,8 +14,9 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 #include <openssl/pem.h>
-#include <openssl/rsa.h>
-#include <openssl/dsa.h>
+#include "internal/asn1_int.h"
+
+int pem_check_suffix(const char *pem_str, const char *suffix);
 
 #ifndef OPENSSL_NO_STDIO
 STACK_OF(X509_INFO) *PEM_X509_INFO_read(FILE *fp, STACK_OF(X509_INFO) *sk,
@@ -46,6 +47,7 @@ STACK_OF(X509_INFO) *PEM_X509_INFO_read_bio(BIO *bp, STACK_OF(X509_INFO) *sk,
     long len, error = 0;
     int ok = 0;
     STACK_OF(X509_INFO) *ret = NULL;
+    int tlen = 0;
     unsigned int i, raw, ptype;
     d2i_of_void *d2i = 0;
 
@@ -103,10 +105,16 @@ STACK_OF(X509_INFO) *PEM_X509_INFO_read_bio(BIO *bp, STACK_OF(X509_INFO) *sk,
                 goto start;
             }
             pp = &(xi->crl);
-        } else
-#ifndef OPENSSL_NO_RSA
-        if (strcmp(name, PEM_STRING_RSA) == 0) {
-            d2i = (D2I_OF(void)) d2i_RSAPrivateKey;
+        } else if (strcmp(name, PEM_STRING_PKCS8) == 0
+                   || strcmp(name, PEM_STRING_PKCS8INF) == 0) {
+            /* Nothing, this isn't supported (yet) */
+        } else if ((tlen = pem_check_suffix(name, "PRIVATE KEY")) > 0) {
+            const EVP_PKEY_ASN1_METHOD *ameth;
+
+            ameth = EVP_PKEY_asn1_find_str(NULL, name, tlen);
+            if (ameth != NULL && ameth->old_priv_decode != NULL)
+                ptype = ameth->pkey_id;
+
             if (xi->x_pkey != NULL) {
                 if (!sk_X509_INFO_push(ret, xi))
                     goto err;
@@ -121,64 +129,16 @@ STACK_OF(X509_INFO) *PEM_X509_INFO_read_bio(BIO *bp, STACK_OF(X509_INFO) *sk,
             xi->x_pkey = X509_PKEY_new();
             if (xi->x_pkey == NULL)
                 goto err;
-            ptype = EVP_PKEY_RSA;
+
             pp = &xi->x_pkey->dec_pkey;
             if ((int)strlen(header) > 10) /* assume encrypted */
                 raw = 1;
-        } else
-#endif
-#ifndef OPENSSL_NO_DSA
-        if (strcmp(name, PEM_STRING_DSA) == 0) {
-            d2i = (D2I_OF(void)) d2i_DSAPrivateKey;
-            if (xi->x_pkey != NULL) {
-                if (!sk_X509_INFO_push(ret, xi))
-                    goto err;
-                if ((xi = X509_INFO_new()) == NULL)
-                    goto err;
-                goto start;
-            }
-
-            xi->enc_data = NULL;
-            xi->enc_len = 0;
-
-            xi->x_pkey = X509_PKEY_new();
-            if (xi->x_pkey == NULL)
-                goto err;
-            ptype = EVP_PKEY_DSA;
-            pp = &xi->x_pkey->dec_pkey;
-            if ((int)strlen(header) > 10) /* assume encrypted */
-                raw = 1;
-        } else
-#endif
-#ifndef OPENSSL_NO_EC
-        if (strcmp(name, PEM_STRING_ECPRIVATEKEY) == 0) {
-            d2i = (D2I_OF(void)) d2i_ECPrivateKey;
-            if (xi->x_pkey != NULL) {
-                if (!sk_X509_INFO_push(ret, xi))
-                    goto err;
-                if ((xi = X509_INFO_new()) == NULL)
-                    goto err;
-                goto start;
-            }
-
-            xi->enc_data = NULL;
-            xi->enc_len = 0;
-
-            xi->x_pkey = X509_PKEY_new();
-            if (xi->x_pkey == NULL)
-                goto err;
-            ptype = EVP_PKEY_EC;
-            pp = &xi->x_pkey->dec_pkey;
-            if ((int)strlen(header) > 10) /* assume encrypted */
-                raw = 1;
-        } else
-#endif
-        {
+        } else {
             d2i = NULL;
             pp = NULL;
         }
 
-        if (d2i != NULL) {
+        if (d2i != NULL || ptype != 0) {
             if (!raw) {
                 EVP_CIPHER_INFO cipher;
 
@@ -308,14 +268,12 @@ int PEM_X509_INFO_write_bio(BIO *bp, X509_INFO *xi, EVP_CIPHER *enc,
             if (i <= 0)
                 goto err;
         } else {
-            /* Add DSA/DH */
-#ifndef OPENSSL_NO_RSA
             /* normal optionally encrypted stuff */
-            if (PEM_write_bio_RSAPrivateKey(bp,
-                                            EVP_PKEY_get0_RSA(xi->x_pkey->dec_pkey),
-                                            enc, kstr, klen, cb, u) <= 0)
+            if (PEM_write_bio_PrivateKey_traditional(bp,
+                                                     xi->x_pkey->dec_pkey,
+                                                     enc, kstr, klen, cb, u)
+                <= 0)
                 goto err;
-#endif
         }
     }
 

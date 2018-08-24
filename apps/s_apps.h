@@ -87,3 +87,19 @@ void ssl_ctx_security_debug(SSL_CTX *ctx, int verbose);
 int set_keylog_file(SSL_CTX *ctx, const char *keylog_file);
 void print_ca_names(BIO *bio, SSL *s);
 #endif
+void wait_for_async(SSL *s);
+
+__owur int ctx_set_verify_locations(SSL_CTX *ctx, const char *CAfile,
+                                    const char *CApath, int noCAfile,
+                                    int noCApath);
+
+#ifndef OPENSSL_NO_CT
+
+/*
+ * Sets the file to load the Certificate Transparency log list from.
+ * If path is NULL, loads from the default file path.
+ * Returns 1 on success, 0 otherwise.
+ */
+__owur int ctx_set_ctlog_list_file(SSL_CTX *ctx, const char *path);
+
+#endif

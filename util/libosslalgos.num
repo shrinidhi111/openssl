@@ -2,3 +2,4 @@ openssl_add_all_pmeths_int              1	1_1_1	EXIST::FUNCTION:
 openssl_add_all_ciphers_int             2	1_1_1	EXIST::FUNCTION:
 openssl_add_all_digests_int             3	1_1_1	EXIST::FUNCTION:
 openssl_add_all_ameths_int              4	1_1_1	EXIST::FUNCTION:
+openssl_add_all_asn1_items_int          5	1_1_1	EXIST::FUNCTION:

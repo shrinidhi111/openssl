@@ -82,7 +82,10 @@ static int ct_v1_log_id_from_pkey(EVP_PKEY *pkey,
         goto err;
     }
 
-    SHA256(pkey_der, pkey_der_len, log_id);
+    if (!EVP_Digest(pkey_der, pkey_der_len, log_id, NULL, EVP_sha256(), NULL)) {
+        CTerr(CT_F_CT_V1_LOG_ID_FROM_PKEY, ERR_R_EVP_LIB);
+        goto err;
+    }
     ret = 1;
 err:
     OPENSSL_free(pkey_der);

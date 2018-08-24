@@ -79,7 +79,6 @@ CONF *app_load_config(const char *filename);
 CONF *app_load_config_quiet(const char *filename);
 int app_load_modules(const CONF *config);
 void unbuffer(FILE *fp);
-void wait_for_async(SSL *s);
 # if defined(OPENSSL_SYS_MSDOS)
 int has_stdin_waiting(void);
 # endif
@@ -472,20 +471,6 @@ int load_crls(const char *file, STACK_OF(X509_CRL) **crls, int format,
               const char *pass, const char *cert_descrip);
 X509_STORE *setup_verify(const char *CAfile, const char *CApath,
                          int noCAfile, int noCApath);
-__owur int ctx_set_verify_locations(SSL_CTX *ctx, const char *CAfile,
-                                    const char *CApath, int noCAfile,
-                                    int noCApath);
-
-#ifndef OPENSSL_NO_CT
-
-/*
- * Sets the file to load the Certificate Transparency log list from.
- * If path is NULL, loads from the default file path.
- * Returns 1 on success, 0 otherwise.
- */
-__owur int ctx_set_ctlog_list_file(SSL_CTX *ctx, const char *path);
-
-#endif
 
 ENGINE *setup_engine(const char *engine, int debug);
 void release_engine(ENGINE *e);

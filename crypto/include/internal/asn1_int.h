@@ -40,6 +40,10 @@ struct evp_pkey_asn1_method_st {
     int (*sig_print) (BIO *out,
                       const X509_ALGOR *sigalg, const ASN1_STRING *sig,
                       int indent, ASN1_PCTX *pctx);
+#if 0
+    int (*pkey_new) (EVP_PKEY *pkey);
+    int (*pkey_copy) (EVP_PKEY *to, EVP_PKEY *from);
+#endif
     void (*pkey_free) (EVP_PKEY *pkey);
     int (*pkey_ctrl) (EVP_PKEY *pkey, int op, long arg1, void *arg2);
     /* Legacy functions for i2d / d2i of public keys */

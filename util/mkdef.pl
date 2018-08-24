@@ -264,11 +264,12 @@ $skipthese{'include/openssl/opensslconf.h'} = 1;
 my $compat =
     join(' ',
          map { "include/openssl/$_" }
-             qw(aes.h blowfish.h camellia.h cast.h cmac.h des.h
-                dh.h dherr.h dsa.h dsaerr.h ecdh.h ecdsa.h ec.h ecerr.h
-                hmac.h idea.h kdf.h kdferr.h md2.h md4.h md5.h mdc2.h modes.h
-                rc2.h rc4.h rc5.h ripemd.h rsa.h rsaerr.h seed.h sha.h
-                whrlpool.h));
+             ( qw(aes.h blowfish.h camellia.h cast.h cmac.h des.h
+                  dh.h dherr.h dsa.h dsaerr.h ecdh.h ecdsa.h ec.h ecerr.h
+                  hmac.h idea.h kdf.h kdferr.h md2.h md4.h md5.h mdc2.h modes.h
+                  rc2.h rc4.h rc5.h ripemd.h rsa.h rsaerr.h seed.h sha.h
+                  whrlpool.h),
+               qw(pem-compat.h x509-compat.h)));
 foreach (split(/\s+/, $compat)) {
     $skipthese{$_} = 1;
 }
@@ -293,6 +294,7 @@ my $symhacks="include/openssl/symhacks.h";
 my @ssl_symbols = &do_defs("LIBSSL", $ssl, $symhacks);
 my @crypto_symbols = &do_defs("LIBCRYPTO", $crypto, $symhacks);
 my @algorithms_symbols = (
+    'openssl_add_all_asn1_items_int\EXIST::FUNCTION:',
     'openssl_add_all_ameths_int\EXIST::FUNCTION:',
     'openssl_add_all_pmeths_int\EXIST::FUNCTION:',
     'openssl_add_all_ciphers_int\EXIST::FUNCTION:',

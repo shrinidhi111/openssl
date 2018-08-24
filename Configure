@@ -299,7 +299,8 @@ my $auto_threads=1;    # enable threads automatically? true by default
 my $default_ranlib;
 
 # Top level directories to build
-$config{dirs} = [ "algorithms", "crypto", "ssl", "engines", "apps", "test", "util", "tools", "fuzz" ];
+# "ssl" temprarily removed
+$config{dirs} = [ "algorithms", "crypto", "engines", "apps", "test", "util", "tools", "fuzz" ];
 # crypto/ subdirectories to build
 $config{sdirs} = [
     "objects",

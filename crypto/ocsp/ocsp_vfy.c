@@ -7,6 +7,7 @@
  * https://www.openssl.org/source/license.html
  */
 
+#include <openssl/sha.h>
 #include <openssl/ocsp.h>
 #include "ocsp_lcl.h"
 #include <openssl/err.h>

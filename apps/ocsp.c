@@ -274,6 +274,10 @@ int ocsp_main(int argc, char **argv)
                 BIO_printf(bio_err, "%s Error parsing URL\n", prog);
                 goto end;
             }
+            if (use_ssl) {
+                BIO_printf(bio_err, "%s SSL unsupported for the moment\n", prog);
+                goto end;
+            }
             thost = host;
             tport = port;
             tpath = path;
@@ -1556,7 +1560,9 @@ OCSP_RESPONSE *process_responder(OCSP_REQUEST *req,
                                  int req_timeout)
 {
     BIO *cbio = NULL;
+#  if 0
     SSL_CTX *ctx = NULL;
+#  endif  /* 0 */
     OCSP_RESPONSE *resp = NULL;
 
     cbio = BIO_new_connect(host);
@@ -1566,6 +1572,7 @@ OCSP_RESPONSE *process_responder(OCSP_REQUEST *req,
     }
     if (port != NULL)
         BIO_set_conn_port(cbio, port);
+#  if 0
     if (use_ssl == 1) {
         BIO *sbio;
         ctx = SSL_CTX_new(TLS_client_method());
@@ -1577,13 +1584,16 @@ OCSP_RESPONSE *process_responder(OCSP_REQUEST *req,
         sbio = BIO_new_ssl(ctx, 1);
         cbio = BIO_push(sbio, cbio);
     }
+#  endif  /* 0 */
 
     resp = query_responder(cbio, host, path, headers, req, req_timeout);
     if (resp == NULL)
         BIO_printf(bio_err, "Error querying OCSP responder\n");
  end:
     BIO_free_all(cbio);
+#  if 0
     SSL_CTX_free(ctx);
+#  endif  /* 0 */
     return resp;
 }
 # endif

@@ -1478,3 +1478,60 @@ void print_ca_names(BIO *bio, SSL *s)
         BIO_write(bio, "\n", 1);
     }
 }
+
+void wait_for_async(SSL *s)
+{
+    /* On Windows select only works for sockets, so we simply don't wait  */
+#ifndef OPENSSL_SYS_WINDOWS
+    int width = 0;
+    fd_set asyncfds;
+    OSSL_ASYNC_FD *fds;
+    size_t numfds;
+    size_t i;
+
+    if (!SSL_get_all_async_fds(s, NULL, &numfds))
+        return;
+    if (numfds == 0)
+        return;
+    fds = app_malloc(sizeof(OSSL_ASYNC_FD) * numfds, "allocate async fds");
+    if (!SSL_get_all_async_fds(s, fds, &numfds)) {
+        OPENSSL_free(fds);
+        return;
+    }
+
+    FD_ZERO(&asyncfds);
+    for (i = 0; i < numfds; i++) {
+        if (width <= (int)fds[i])
+            width = (int)fds[i] + 1;
+        openssl_fdset((int)fds[i], &asyncfds);
+    }
+    select(width, (void *)&asyncfds, NULL, NULL, NULL);
+    OPENSSL_free(fds);
+#endif
+}
+
+int ctx_set_verify_locations(SSL_CTX *ctx, const char *CAfile,
+                             const char *CApath, int noCAfile, int noCApath)
+{
+    if (CAfile == NULL && CApath == NULL) {
+        if (!noCAfile && SSL_CTX_set_default_verify_file(ctx) <= 0)
+            return 0;
+        if (!noCApath && SSL_CTX_set_default_verify_dir(ctx) <= 0)
+            return 0;
+
+        return 1;
+    }
+    return SSL_CTX_load_verify_locations(ctx, CAfile, CApath);
+}
+
+#ifndef OPENSSL_NO_CT
+
+int ctx_set_ctlog_list_file(SSL_CTX *ctx, const char *path)
+{
+    if (path == NULL)
+        return SSL_CTX_set_default_ctlog_list_file(ctx);
+
+    return SSL_CTX_set_ctlog_list_file(ctx, path);
+}
+
+#endif

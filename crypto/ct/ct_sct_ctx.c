@@ -17,6 +17,7 @@
 #include <openssl/err.h>
 #include <openssl/obj_mac.h>
 #include <openssl/x509.h>
+#include <openssl/sha.h>
 
 #include "ct_locl.h"
 
