@@ -28,6 +28,7 @@
 # include <openssl/txt_db.h>
 # include <openssl/engine.h>
 # include <openssl/ocsp.h>
+# include <openssl/store.h>
 # include <signal.h>
 
 # if defined(OPENSSL_SYS_WIN32) || defined(OPENSSL_SYS_WINCE)
@@ -442,6 +443,11 @@ int password_callback(char *buf, int bufsiz, int verify, PW_CB_DATA *cb_data);
 int setup_ui_method(void);
 void destroy_ui_method(void);
 const UI_METHOD *get_ui_method(void);
+
+int setup_engine_loader(void);
+void destroy_engine_loader(void);
+# define APP_STORE_C_LOAD_PRIVKEY      (OSSL_STORE_C_CUSTOM_START + 0)
+# define APP_STORE_C_LOAD_PUBKEY       (OSSL_STORE_C_CUSTOM_START + 1)
 
 int chopup_args(ARGS *arg, char *buf);
 # ifdef HEADER_X509_H
