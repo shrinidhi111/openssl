@@ -180,7 +180,7 @@ int crl_main(int argc, char **argv)
     if (argc != 0)
         goto opthelp;
 
-    x = load_crl(infile, informat);
+    x = load_crl(infile);
     if (x == NULL)
         goto end;
 
@@ -224,10 +224,10 @@ int crl_main(int argc, char **argv)
             BIO_puts(bio_err, "Missing CRL signing key\n");
             goto end;
         }
-        newcrl = load_crl(crldiff, informat);
+        newcrl = load_crl(crldiff);
         if (!newcrl)
             goto end;
-        pkey = load_key(keyfile, keyformat, 0, NULL, NULL, "CRL signing key");
+        pkey = load_key(keyfile, 0, NULL, NULL, "CRL signing key");
         if (!pkey) {
             X509_CRL_free(newcrl);
             goto end;

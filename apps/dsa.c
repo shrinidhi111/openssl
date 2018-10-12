@@ -64,7 +64,7 @@ int dsa_main(int argc, char **argv)
 {
     BIO *out = NULL;
     DSA *dsa = NULL;
-    ENGINE *e = NULL;
+    ENGINE *e = NULL, *key_e = NULL;
     const EVP_CIPHER *enc = NULL;
     char *infile = NULL, *outfile = NULL, *prog;
     char *passin = NULL, *passout = NULL, *passinarg = NULL, *passoutarg = NULL;
@@ -144,6 +144,9 @@ int dsa_main(int argc, char **argv)
     if (argc != 0)
         goto opthelp;
 
+    if (informat == FORMAT_ENGINE)
+        key_e = e;
+
     private = pubin || pubout ? 0 : 1;
     if (text && !pubin)
         private = 1;
@@ -158,9 +161,9 @@ int dsa_main(int argc, char **argv)
         EVP_PKEY *pkey;
 
         if (pubin)
-            pkey = load_pubkey(infile, informat, 1, passin, e, "Public Key");
+            pkey = load_pubkey(infile, 1, passin, key_e, "Public Key");
         else
-            pkey = load_key(infile, informat, 1, passin, e, "Private Key");
+            pkey = load_key(infile, 1, passin, key_e, "Private Key");
 
         if (pkey != NULL) {
             dsa = EVP_PKEY_get1_DSA(pkey);
