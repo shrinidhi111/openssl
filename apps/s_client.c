@@ -930,7 +930,7 @@ int s_client_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
     ENGINE *ssl_client_engine = NULL;
 #endif
-    ENGINE *e = NULL, *key_e;
+    ENGINE *e = NULL, *key_e = NULL;
 #if defined(OPENSSL_SYS_WINDOWS) || defined(OPENSSL_SYS_MSDOS)
     struct timeval tv;
 #endif
