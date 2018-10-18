@@ -708,7 +708,8 @@ int load_objects(const char *uri, int maybe_stdin,
 
     ok = 1;
  err:
-    OSSL_STORE_close(ctx);
+    if (ctx)
+      OSSL_STORE_close(ctx);
     EVP_PKEY_free(tmp_pkparams);
     EVP_PKEY_free(tmp_pkey);
     X509_free(tmp_onecert);
@@ -758,17 +759,17 @@ EVP_PKEY *load_key(const char *file, int maybe_stdin,
     if (e != NULL) {
         const char *engineid = ENGINE_get_id(e);
         size_t uri_sz =
-            9   /* engine:// */
+            7   /* engine: */
             + strlen(engineid)
-            + 1 /* / */
+            + 1 /* : */
             + strlen(file)
             + 1 /* \0 */
             ;
 
         uri = OPENSSL_malloc(uri_sz);
-        OPENSSL_strlcpy(uri, "engine://", uri_sz);
+        OPENSSL_strlcpy(uri, "engine:", uri_sz);
         OPENSSL_strlcat(uri, engineid, uri_sz);
-        OPENSSL_strlcat(uri, "/", uri_sz);
+        OPENSSL_strlcat(uri, ":", uri_sz);
         OPENSSL_strlcat(uri, file, uri_sz);
         file = uri;
     }
@@ -799,17 +800,17 @@ EVP_PKEY *load_pubkey(const char *file, int maybe_stdin,
     if (e != NULL) {
         const char *engineid = ENGINE_get_id(e);
         size_t uri_sz =
-            9   /* engine:// */
+            7   /* engine: */
             + strlen(engineid)
-            + 1 /* / */
+            + 1 /* : */
             + strlen(file)
             + 1 /* \0 */
             ;
 
         uri = OPENSSL_malloc(uri_sz);
-        OPENSSL_strlcpy(uri, "engine://", uri_sz);
+        OPENSSL_strlcpy(uri, "engine:", uri_sz);
         OPENSSL_strlcat(uri, engineid, uri_sz);
-        OPENSSL_strlcat(uri, "/", uri_sz);
+        OPENSSL_strlcat(uri, ":", uri_sz);
         OPENSSL_strlcat(uri, file, uri_sz);
         file = uri;
     }
