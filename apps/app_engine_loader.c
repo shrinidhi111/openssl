@@ -19,7 +19,7 @@
  *
  * engine:{engineid}:{keyid}
  *
- * Note: we ONLY support ENGINE_load_private_key()
+ * Note: we ONLY support ENGINE_load_private_key() and ENGINE_load_public_key()
  * Note 2: This scheme has a precedent in code in PKIX-SSH. for exactly
  * this sort of purpose.
  */
@@ -68,8 +68,8 @@ static OSSL_STORE_LOADER_CTX *engine_open(const OSSL_STORE_LOADER *loader,
     /* Look for engine ID */
     q = strchr(p, ':');
     if (q != NULL                /* There is both an engine ID and a key ID */
-        && *p != ':'             /* The engine ID is at least one character */
-        && *q[1] != '\0') {      /* The key ID is at least one character */
+        && p[0] != ':'           /* The engine ID is at least one character */
+        && q[1] != '\0') {       /* The key ID is at least one character */
         char engineid[256];
         size_t engineid_l = q - p;
 
