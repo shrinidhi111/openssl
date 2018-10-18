@@ -75,12 +75,16 @@ my @noexist_file_files =
     ( "file:blahdiblah.pem",
       "file:test/blahdibleh.der" );
 
+my $test_src_rsa_files =
+    (disabled("engine") || disabled("dynamic-engine")) ? 0 : 1;
+
 my $n = (3 * scalar @noexist_files)
     + (6 * scalar @src_files)
     + (4 * scalar @generated_files)
     + (scalar keys %generated_file_files)
     + (scalar @noexist_file_files)
-    + (4 * scalar @src_rsa_files)	# load with apps engine: loader
+    # load with apps 'engine:' loader
+    + ($test_src_rsa_files * 4 * scalar @src_rsa_files)
     + 3
     + 11
     ;
@@ -161,20 +165,22 @@ indir "store_$$" => sub {
             }
         }
 
-        foreach (@src_rsa_files) {
-            my $file = srctop_file($_);
-	    my @pubin = $_ =~ m|pub\.pem$| ? ("-pubin") : ();
+	if ($test_src_rsa_files) {
+	    foreach (@src_rsa_files) {
+		my $file = srctop_file($_);
+		my @pubin = $_ =~ m|pub\.pem$| ? ("-pubin") : ();
 
-            ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
-			"-engine", "ossltest", "-inform", "engine",
-			"-in", "ot:".$file])));
-            ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
-			"-engine", "ossltest", "-inform", "engine",
-			"-in", "ot:".to_abs_file($file)])));
-            ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
-			"-in", "engine:ossltest:ot:$file"])));
-            ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
-			"-in", "engine:ossltest:ot:".to_abs_file($file)])));
+		ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
+			    "-engine", "ossltest", "-inform", "engine",
+			    "-in", "ot:".$file])));
+		ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
+			    "-engine", "ossltest", "-inform", "engine",
+			    "-in", "ot:".to_abs_file($file)])));
+		ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
+			    "-in", "engine:ossltest:ot:$file"])));
+		ok(run(app(["openssl", "rsa", "-text", "-noout", @pubin,
+			    "-in", "engine:ossltest:ot:".to_abs_file($file)])));
+	    }
 	}
 
         {
