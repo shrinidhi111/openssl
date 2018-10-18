@@ -29,6 +29,10 @@
 
 #include "e_ossltest_err.c"
 
+#ifdef _WIN32
+# define strncasecmp _stricmp
+#endif
+
 /* Engine Id and Name */
 static const char *engine_ossltest_id = "ossltest";
 static const char *engine_ossltest_name = "OpenSSL Test engine support";
