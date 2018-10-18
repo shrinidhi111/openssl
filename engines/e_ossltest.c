@@ -30,7 +30,7 @@
 #include "e_ossltest_err.c"
 
 #ifdef _WIN32
-# define strncasecmp _stricmp
+# define strncasecmp _strnicmp
 #endif
 
 /* Engine Id and Name */
