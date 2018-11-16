@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -29,6 +29,7 @@ OPENSSL_STACK *OPENSSL_sk_new(OPENSSL_sk_compfunc cmp);
 OPENSSL_STACK *OPENSSL_sk_new_null(void);
 OPENSSL_STACK *OPENSSL_sk_new_reserve(OPENSSL_sk_compfunc c, int n);
 int OPENSSL_sk_reserve(OPENSSL_STACK *st, int n);
+int OPENSSL_sk_reserve_at_least(OPENSSL_STACK *st, int n);
 void OPENSSL_sk_free(OPENSSL_STACK *);
 void OPENSSL_sk_pop_free(OPENSSL_STACK *st, void (*func) (void *));
 OPENSSL_STACK *OPENSSL_sk_deep_copy(const OPENSSL_STACK *,

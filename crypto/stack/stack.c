@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -232,6 +232,21 @@ int OPENSSL_sk_reserve(OPENSSL_STACK *st, int n)
     if (n < 0)
         return 1;
     return sk_reserve(st, n, 1);
+}
+
+int OPENSSL_sk_reserve_at_least(OPENSSL_STACK *st, int n)
+{
+    const int extra = n - st->num + 1;
+
+    if (st == NULL)
+        return 0;
+    if (extra <= 0)
+        return 1;
+    if (!sk_reserve(st, extra, 0))
+        return 0;
+    memset(st->data + st->num, 0, sizeof(*st->data) * extra);
+    st->num = n + 1;
+    return 1;
 }
 
 int OPENSSL_sk_insert(OPENSSL_STACK *st, const void *data, int loc)

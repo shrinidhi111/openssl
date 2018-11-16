@@ -48,6 +48,10 @@ extern "C" {
     { \
         return OPENSSL_sk_reserve((OPENSSL_STACK *)sk, n); \
     } \
+    static ossl_inline int sk_##t1##_reserve_at_least(STACK_OF(t1) *sk, int n) \
+    { \
+        return OPENSSL_sk_reserve_at_least((OPENSSL_STACK *)sk, n); \
+    } \
     static ossl_inline void sk_##t1##_free(STACK_OF(t1) *sk) \
     { \
         OPENSSL_sk_free((OPENSSL_STACK *)sk); \
