@@ -7,8 +7,6 @@
 
      sub windowsdll { $config{target} =~ /^(?:Cygwin|mingw)/ }
 
-     # Shared AIX support is special. We put libcrypto[64].so.ver into
-     # libcrypto.a and use libcrypto_a.a as static one.
      sub sharedaix  { !$disabled{shared} && $config{target} =~ /^aix/ }
 
      our $sover_dirname = platform->shlib_version_as_filename();
@@ -51,52 +49,6 @@ DEPS={- join(" ", map { platform->isobj($_) ? platform->dep($_) : () }
 GENERATED_MANDATORY={- join(" ", @{$unified_info{depends}->{""}}) -}
 GENERATED={- # common0.tmpl provides @generated
              join(" ", map { platform->convertext($_) } @generated ) -}
-
-INSTALL_LIBS={-
-        join(" ", map { platform->staticlib($_) // () }
-                  grep { !$unified_info{attributes}->{$_}->{noinst} }
-                  @{$unified_info{libraries}})
--}
-INSTALL_SHLIBS={-
-        join(" ", map { platform->sharedlib($_) // () }
-                  grep { !$unified_info{attributes}->{$_}->{noinst} }
-                  @{$unified_info{libraries}})
--}
-INSTALL_SHLIB_INFO={-
-        join(" ", map { my $x = platform->sharedlib($_);
-                        my $y = platform->sharedlib_simple($_);
-                        $x ? "\"$x;$y\"" : () }
-                  grep { !$unified_info{attributes}->{$_}->{noinst} }
-                  @{$unified_info{libraries}})
--}
-INSTALL_ENGINES={-
-        join(" ", map { platform->dso($_) }
-                  grep { !$unified_info{attributes}->{$_}->{noinst}
-                         && $unified_info{attributes}->{$_}->{engine} }
-                  @{$unified_info{modules}})
--}
-INSTALL_PROGRAMS={-
-        join(" ", map { platform->bin($_) }
-                  grep { !$unified_info{attributes}->{$_}->{noinst} }
-                  @{$unified_info{programs}})
--}
-BIN_SCRIPTS={-
-        join(" ", map { my $x = $unified_info{attributes}->{$_}->{linkname};
-                        $x ? "$_:$x" : $_ }
-                  grep { !$unified_info{attributes}->{$_}->{noinst}
-                         && !$unified_info{attributes}->{$_}->{misc} }
-                  @{$unified_info{scripts}})
--}
-MISC_SCRIPTS={-
-        join(" ", map { my $x = $unified_info{attributes}->{$_}->{linkname};
-                        $x ? "$_:$x" : $_ }
-                  grep { !$unified_info{attributes}->{$_}->{noinst}
-                         && $unified_info{attributes}->{$_}->{misc} }
-                  @{$unified_info{scripts}})
--}
-
-APPS_OPENSSL={- use File::Spec::Functions;
-                catfile("apps","openssl") -}
 
 # DESTDIR is for package builders so that they can configure for, say,
 # /usr/ and yet have everything installed to /tmp/somedir/usr/.
@@ -414,7 +366,28 @@ depend:
 	@: {- output_on() if $disabled{makedepend}; "" -}
 
 # Install helper targets #############################################
+{-
+    platform->register_install_path('$(DESTDIR)$(INSTALLTOP)/include/openssl',
+                                    type => 'header');
+    platform->register_install_path('$(DESTDIR)$(libdir)', type => 'lib');
+    platform->register_install_path('$(DESTDIR)$(libdir)/pkgconfig',
+                                    type => 'pkgconfig');
 
+    platform->register_install_path('$(DESTDIR)$(INSTALLTOP)/bin',
+                                    type => 'bin');
+
+    platform->register_install_path('$(DESTDIR)$(ENGINESDIR)',
+                                    type => 'engine');
+
+    platform->register_install_path('$(DESTDIR)$(OPENSSLDIR)', type => 'conf');
+    platform->register_install_path('$(DESTDIR)$(OPENSSLDIR)/certs',
+                                    type => 'certs');
+    platform->register_install_path('$(DESTDIR)$(OPENSSLDIR)/private',
+                                    type => 'private');
+    platform->register_install_path('$(DESTDIR)$(OPENSSLDIR)/misc',
+                                    type => 'misc');
+    "";
+-}
 install_sw: install_dev install_engines install_runtime
 
 uninstall_sw: uninstall_runtime uninstall_engines uninstall_dev
@@ -425,275 +398,149 @@ uninstall_docs: uninstall_man_docs uninstall_html_docs
 	$(RM) -r -v $(DESTDIR)$(DOCDIR)
 
 install_ssldirs:
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(OPENSSLDIR)/certs
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(OPENSSLDIR)/private
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(OPENSSLDIR)/misc
-	@set -e; for x in dummy $(MISC_SCRIPTS); do \
-		if [ "$$x" = "dummy" ]; then continue; fi; \
-		x1=`echo "$$x" | cut -f1 -d:`; \
-		x2=`echo "$$x" | cut -f2 -d:`; \
-		fn=`basename $$x1`; \
-		$(ECHO) "install $$x1 -> $(DESTDIR)$(OPENSSLDIR)/misc/$$fn"; \
-		cp $$x1 $(DESTDIR)$(OPENSSLDIR)/misc/$$fn.new; \
-		chmod 755 $(DESTDIR)$(OPENSSLDIR)/misc/$$fn.new; \
-		mv -f $(DESTDIR)$(OPENSSLDIR)/misc/$$fn.new \
-		      $(DESTDIR)$(OPENSSLDIR)/misc/$$fn; \
-		if [ "$$x1" != "$$x2" ]; then \
-			ln=`basename "$$x2"`; \
-			: {- output_off() unless windowsdll(); "" -}; \
-			$(ECHO) "copy $(DESTDIR)$(OPENSSLDIR)/misc/$$ln -> $(DESTDIR)$(OPENSSLDIR)/misc/$$fn"; \
-			cp $(DESTDIR)$(OPENSSLDIR)/misc/$$fn $(DESTDIR)$(OPENSSLDIR)/misc/$$ln; \
-			: {- output_on() unless windowsdll();
-			     output_off() if windowsdll(); "" -}; \
-			$(ECHO) "link $(DESTDIR)$(OPENSSLDIR)/misc/$$ln -> $(DESTDIR)$(OPENSSLDIR)/misc/$$fn"; \
-			ln -sf $$fn $(DESTDIR)$(OPENSSLDIR)/misc/$$ln; \
-			: {- output_on() if windowsdll(); "" -}; \
-		fi; \
-	done
-	@$(ECHO) "install $(SRCDIR)/apps/openssl.cnf -> $(DESTDIR)$(OPENSSLDIR)/openssl.cnf.dist"
-	@cp $(SRCDIR)/apps/openssl.cnf $(DESTDIR)$(OPENSSLDIR)/openssl.cnf.new
-	@chmod 644 $(DESTDIR)$(OPENSSLDIR)/openssl.cnf.new
-	@mv -f  $(DESTDIR)$(OPENSSLDIR)/openssl.cnf.new $(DESTDIR)$(OPENSSLDIR)/openssl.cnf.dist
-	@if [ ! -f "$(DESTDIR)$(OPENSSLDIR)/openssl.cnf" ]; then \
-		$(ECHO) "install $(SRCDIR)/apps/openssl.cnf -> $(DESTDIR)$(OPENSSLDIR)/openssl.cnf"; \
-		cp $(SRCDIR)/apps/openssl.cnf $(DESTDIR)$(OPENSSLDIR)/openssl.cnf; \
-		chmod 644 $(DESTDIR)$(OPENSSLDIR)/openssl.cnf; \
-	fi
-	@$(ECHO) "install $(SRCDIR)/apps/ct_log_list.cnf -> $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.dist"
-	@cp $(SRCDIR)/apps/ct_log_list.cnf $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.new
-	@chmod 644 $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.new
-	@mv -f  $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.new $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.dist
-	@if [ ! -f "$(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf" ]; then \
-		$(ECHO) "install $(SRCDIR)/apps/ct_log_list.cnf -> $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf"; \
-		cp $(SRCDIR)/apps/ct_log_list.cnf $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf; \
-		chmod 644 $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf; \
-	fi
+	{- join("\n\t",
+                platform->install_dir(type => 'conf', silent => 1),
+                platform->install_dir(type => 'certs', silent => 1),
+                platform->install_dir(type => 'private', silent => 1),
+                platform->install_dir(type => 'misc', silent => 1)); -}
+	{- join("\n\t",
+                platform->install_exec('$(BLDDIR)/apps/CA.pl',
+                                       type => 'misc', silent => 1),
+                platform->install_exec('$(BLDDIR)/apps/tsget.pl',
+                                       type => 'misc', silent => 1),
+                platform->install_alias('tsget', 'tsget.pl',
+                                        type => 'misc', silent => 1)) -}
+	{- join("\n\t",
+                platform->install_file('$(SRCDIR)/apps/openssl.cnf',
+                                       type => 'conf', silent => 1),
+                platform->install_file('$(SRCDIR)/apps/ct_log_list.cnf',
+                                       type => 'conf', silent => 1)); -}
 
 install_dev: install_runtime_libs
 	@[ -n "$(INSTALLTOP)" ] || (echo INSTALLTOP should not be empty; exit 1)
 	@$(ECHO) "*** Installing development files"
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(INSTALLTOP)/include/openssl
-	@ : {- output_off() unless grep { $_ eq "OPENSSL_USE_APPLINK" } (@{$target{defines}}, @{$config{defines}}); "" -}
-	@$(ECHO) "install $(SRCDIR)/ms/applink.c -> $(DESTDIR)$(INSTALLTOP)/include/openssl/applink.c"
-	@cp $(SRCDIR)/ms/applink.c $(DESTDIR)$(INSTALLTOP)/include/openssl/applink.c
-	@chmod 644 $(DESTDIR)$(INSTALLTOP)/include/openssl/applink.c
-	@ : {- output_on() unless grep { $_ eq "OPENSSL_USE_APPLINK" } (@{$target{defines}}, @{$config{defines}}); "" -}
+	{- join("\n\t", platform->install_dir(type => 'header',
+                                              silent => 1)); -}
+	{- join("\n\t",
+                (grep { $_ eq "OPENSSL_USE_APPLINK" } @{$target{defines}},
+                                                      @{$config{defines}})
+                ? platform->install_file('$(SRCDIR)/ms/applink.c',
+                                         type => 'header', silent => 1)
+                : '@ :'); -}
 	@set -e; for i in $(SRCDIR)/include/openssl/*.h \
 			  $(BLDDIR)/include/openssl/*.h; do \
 		fn=`basename $$i`; \
-		$(ECHO) "install $$i -> $(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn"; \
-		cp $$i $(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn; \
-		chmod 644 $(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn; \
+		{- join("; \\\n\t\t",
+                        platform->install_file('$$i', dstfile => '$$fn',
+                                               type => 'header')); -}; \
 	done
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(libdir)
-	@set -e; for l in $(INSTALL_LIBS); do \
-		fn=`basename $$l`; \
-		$(ECHO) "install $$l -> $(DESTDIR)$(libdir)/$$fn"; \
-		cp $$l $(DESTDIR)$(libdir)/$$fn.new; \
-		$(RANLIB) $(DESTDIR)$(libdir)/$$fn.new; \
-		chmod 644 $(DESTDIR)$(libdir)/$$fn.new; \
-		mv -f $(DESTDIR)$(libdir)/$$fn.new \
-		      $(DESTDIR)$(libdir)/$$fn; \
-	done
-	@ : {- output_off() if $disabled{shared}; "" -}
-	@set -e; for s in $(INSTALL_SHLIB_INFO); do \
-		s1=`echo "$$s" | cut -f1 -d";"`; \
-		s2=`echo "$$s" | cut -f2 -d";"`; \
-		fn1=`basename $$s1`; \
-		fn2=`basename $$s2`; \
-		: {- output_off(); output_on() unless windowsdll() or sharedaix(); "" -}; \
-		if [ "$$fn1" != "$$fn2" ]; then \
-			$(ECHO) "link $(DESTDIR)$(libdir)/$$fn2 -> $(DESTDIR)$(libdir)/$$fn1"; \
-			ln -sf $$fn1 $(DESTDIR)$(libdir)/$$fn2; \
-		fi; \
-		: {- output_off() unless windowsdll() or sharedaix(); output_on() if windowsdll(); "" -}; \
-		$(ECHO) "install $$s2 -> $(DESTDIR)$(libdir)/$$fn2"; \
-		cp $$s2 $(DESTDIR)$(libdir)/$$fn2.new; \
-		chmod 755 $(DESTDIR)$(libdir)/$$fn2.new; \
-		mv -f $(DESTDIR)$(libdir)/$$fn2.new \
-		      $(DESTDIR)$(libdir)/$$fn2; \
-		: {- output_off() if windowsdll(); output_on() if sharedaix(); "" -}; \
-		a=$(DESTDIR)$(libdir)/$$fn2; \
-		$(ECHO) "install $$s1 -> $$a"; \
-		if [ -f $$a ]; then ( trap "rm -rf /tmp/ar.$$$$" INT 0; \
-			mkdir /tmp/ar.$$$$; ( cd /tmp/ar.$$$$; \
-			cp -f $$a $$a.new; \
-			for so in `$(AR) t $$a`; do \
-				$(AR) x $$a $$so; \
-				chmod u+w $$so; \
-				strip -X32_64 -e $$so; \
-				$(AR) r $$a.new $$so; \
-			done; \
-		)); fi; \
-		$(AR) r $$a.new $$s1; \
-		mv -f $$a.new $$a; \
-		: {- output_off() if sharedaix(); output_on(); "" -}; \
-	done
-	@ : {- output_on() if $disabled{shared}; "" -}
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(libdir)/pkgconfig
-	@$(ECHO) "install libcrypto.pc -> $(DESTDIR)$(libdir)/pkgconfig/libcrypto.pc"
-	@cp libcrypto.pc $(DESTDIR)$(libdir)/pkgconfig
-	@chmod 644 $(DESTDIR)$(libdir)/pkgconfig/libcrypto.pc
-	@$(ECHO) "install libssl.pc -> $(DESTDIR)$(libdir)/pkgconfig/libssl.pc"
-	@cp libssl.pc $(DESTDIR)$(libdir)/pkgconfig
-	@chmod 644 $(DESTDIR)$(libdir)/pkgconfig/libssl.pc
-	@$(ECHO) "install openssl.pc -> $(DESTDIR)$(libdir)/pkgconfig/openssl.pc"
-	@cp openssl.pc $(DESTDIR)$(libdir)/pkgconfig
-	@chmod 644 $(DESTDIR)$(libdir)/pkgconfig/openssl.pc
+	{- join("\n\t", platform->install_dir(type => 'devlib', silent => 1)); -}
+	{- join("\n\t",
+                map { platform->install_lib($_, type => 'devlib', silent => 1) }
+                @install_libs); -}
+	{- join("\n\t", platform->install_dir(type => 'pkgconfig', silent => 1)); -}
+	{- join("\n\t",
+                platform->install_file('libcrypto.pc', type => 'pkgconfig',
+                                                       silent => 1),
+                platform->install_file('libssl.pc', type => 'pkgconfig',
+                                                    silent => 1),
+                platform->install_file('openssl.pc', type => 'pkgconfig',
+                                                     silent => 1)); -}
 
 uninstall_dev: uninstall_runtime_libs
 	@$(ECHO) "*** Uninstalling development files"
-	@ : {- output_off() unless grep { $_ eq "OPENSSL_USE_APPLINK" } (@{$target{defines}}, @{$config{defines}}); "" -}
-	@$(ECHO) "$(RM) $(DESTDIR)$(INSTALLTOP)/include/openssl/applink.c"
-	@$(RM) $(DESTDIR)$(INSTALLTOP)/include/openssl/applink.c
-	@ : {- output_on() unless grep { $_ eq "OPENSSL_USE_APPLINK" } (@{$target{defines}}, @{$config{defines}}); "" -}
+	{- join("\n\t",
+                (grep { $_ eq "OPENSSL_USE_APPLINK" } @{$target{defines}},
+                                                      @{$config{defines}})
+                ? platform->uninstall_file('$(SRCDIR)/ms/applink.c',
+                                           type => 'header', silent => 1)
+                : '@ :'); -}
 	@set -e; for i in $(SRCDIR)/include/openssl/*.h \
 			  $(BLDDIR)/include/openssl/*.h; do \
 		fn=`basename $$i`; \
-		$(ECHO) "$(RM) $(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn"; \
-		$(RM) $(DESTDIR)$(INSTALLTOP)/include/openssl/$$fn; \
+		{- join("; \\\n\t\t",
+                        platform->uninstall_file('$$i', dstfile => '$$fn',
+                                                 type => 'header',
+                                                 silent => 1)); -}; \
 	done
-	-$(RMDIR) $(DESTDIR)$(INSTALLTOP)/include/openssl
-	-$(RMDIR) $(DESTDIR)$(INSTALLTOP)/include
-	@set -e; for l in $(INSTALL_LIBS); do \
-		fn=`basename $$l`; \
-		$(ECHO) "$(RM) $(DESTDIR)$(libdir)/$$fn"; \
-		$(RM) $(DESTDIR)$(libdir)/$$fn; \
-	done
-	@ : {- output_off() if $disabled{shared}; "" -}
-	@set -e; for s in $(INSTALL_SHLIB_INFO); do \
-		s1=`echo "$$s" | cut -f1 -d";"`; \
-		s2=`echo "$$s" | cut -f2 -d";"`; \
-		fn1=`basename $$s1`; \
-		fn2=`basename $$s2`; \
-		: {- output_off() if windowsdll(); "" -}; \
-		$(ECHO) "$(RM) $(DESTDIR)$(libdir)/$$fn2"; \
-		$(RM) $(DESTDIR)$(libdir)/$$fn2; \
-		if [ "$$fn1" != "$$fn2" -a -f "$(DESTDIR)$(libdir)/$$fn1" ]; then \
-			$(ECHO) "$(RM) $(DESTDIR)$(libdir)/$$fn1"; \
-			$(RM) $(DESTDIR)$(libdir)/$$fn1; \
-		fi; \
-		: {- output_on() if windowsdll(); "" -}{- output_off() unless windowsdll(); "" -}; \
-		$(ECHO) "$(RM) $(DESTDIR)$(libdir)/$$fn2"; \
-		$(RM) $(DESTDIR)$(libdir)/$$fn2; \
-		: {- output_on() unless windowsdll(); "" -}; \
-	done
-	@ : {- output_on() if $disabled{shared}; "" -}
-	$(RM) $(DESTDIR)$(libdir)/pkgconfig/libcrypto.pc
-	$(RM) $(DESTDIR)$(libdir)/pkgconfig/libssl.pc
-	$(RM) $(DESTDIR)$(libdir)/pkgconfig/openssl.pc
-	-$(RMDIR) $(DESTDIR)$(libdir)/pkgconfig
-	-$(RMDIR) $(DESTDIR)$(libdir)
+	{- join("\n\t",
+                map { platform->uninstall_lib($_, type => 'devlib',
+                                                  silent => 1) }
+                @install_libs); -}
+	{- join("\n\t",
+                platform->uninstall_file('libcrypto.pc', type => 'pkgconfig',
+                                                         silent => 1),
+                platform->uninstall_file('libssl.pc', type => 'pkgconfig',
+                                                      silent => 1),
+                platform->uninstall_file('openssl.pc', type => 'pkgconfig',
+                                                       silent => 1)); -}
+	{- join("\n\t", platform->uninstall_dir(type => 'header', silent => 1)); -}
+	{- join("\n\t", platform->uninstall_dir(type => 'pkgconfig', silent => 1)); -}
+	{- join("\n\t", platform->uninstall_dir(type => 'lib', silent => 1)); -}
 
-install_engines: install_runtime_libs build_modules
+install_engines: install_runtime_libs build_engines
+	@ : {- output_off() unless scalar @install_engines; "" -}
 	@[ -n "$(INSTALLTOP)" ] || (echo INSTALLTOP should not be empty; exit 1)
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(ENGINESDIR)/
-	@$(ECHO) "*** Installing ENGINE modules"
-	@set -e; for e in dummy $(INSTALL_ENGINES); do \
-		if [ "$$e" = "dummy" ]; then continue; fi; \
-		fn=`basename $$e`; \
-		$(ECHO) "install $$e -> $(DESTDIR)$(ENGINESDIR)/$$fn"; \
-		cp $$e $(DESTDIR)$(ENGINESDIR)/$$fn.new; \
-		chmod 755 $(DESTDIR)$(ENGINESDIR)/$$fn.new; \
-		mv -f $(DESTDIR)$(ENGINESDIR)/$$fn.new \
-		      $(DESTDIR)$(ENGINESDIR)/$$fn; \
-	done
+	{- join("\n\t", platform->install_dir(type => 'engine', silent => 1)); -}
+	@$(ECHO) "*** Installing engines"
+	{- join("\n\t",
+                map { platform->install_dso($_, type => 'engine', silent => 1) }
+                @install_engines); -}
+	@ : {- output_on() unless scalar @install_engines; "" -}
 
 uninstall_engines:
-	@$(ECHO) "*** Uninstalling ENGINE modules"
-	@set -e; for e in dummy $(INSTALL_ENGINES); do \
-		if [ "$$e" = "dummy" ]; then continue; fi; \
-		fn=`basename $$e`; \
-		if [ "$$fn" = '{- platform->dso("ossltest") -}' ]; then \
-			continue; \
-		fi; \
-		$(ECHO) "$(RM) $(DESTDIR)$(ENGINESDIR)/$$fn"; \
-		$(RM) $(DESTDIR)$(ENGINESDIR)/$$fn; \
-	done
-	-$(RMDIR) $(DESTDIR)$(ENGINESDIR)
+	@ : {- output_off() unless scalar @install_engines; "" -}
+	@$(ECHO) "*** Uninstalling engines"
+	{- join("\n\t",
+                map { platform->uninstall_dso($_, type => 'engine', silent => 1) }
+                @install_engines); -}
+	{- join("\n\t", platform->uninstall_dir(type => 'engine', silent => 1)); -}
+	@ : {- output_on() unless scalar @install_engines; "" -}
 
 install_runtime: install_programs
 
 install_runtime_libs: build_libs
+	@ : {- output_off() if $disabled{shared}; "" -}
 	@[ -n "$(INSTALLTOP)" ] || (echo INSTALLTOP should not be empty; exit 1)
-	@ : {- output_off() if windowsdll(); "" -}
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(libdir)
-	@ : {- output_on() if windowsdll(); output_off() unless windowsdll(); "" -}
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(INSTALLTOP)/bin
-	@ : {- output_on() unless windowsdll(); "" -}
+	{- join("\n\t", platform->install_dir(type => 'runtimelib', silent => 1)); -}
 	@$(ECHO) "*** Installing runtime libraries"
-	@set -e; for s in dummy $(INSTALL_SHLIBS); do \
-		if [ "$$s" = "dummy" ]; then continue; fi; \
-		fn=`basename $$s`; \
-		: {- output_off() unless windowsdll(); "" -}; \
-		$(ECHO) "install $$s -> $(DESTDIR)$(INSTALLTOP)/bin/$$fn"; \
-		cp $$s $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new; \
-		chmod 755 $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new; \
-		mv -f $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new \
-		      $(DESTDIR)$(INSTALLTOP)/bin/$$fn; \
-		: {- output_on() unless windowsdll(); "" -}{- output_off() if windowsdll(); "" -}; \
-		$(ECHO) "install $$s -> $(DESTDIR)$(libdir)/$$fn"; \
-		cp $$s $(DESTDIR)$(libdir)/$$fn.new; \
-		chmod 755 $(DESTDIR)$(libdir)/$$fn.new; \
-		mv -f $(DESTDIR)$(libdir)/$$fn.new \
-		      $(DESTDIR)$(libdir)/$$fn; \
-		: {- output_on() if windowsdll(); "" -}; \
-	done
+	{- join("\n\t",
+                map { platform->install_lib($_, type => 'runtimelib', silent => 1) }
+                @install_libs); -}
+	@ : {- output_on() if $disabled{shared}; "" -}
 
 install_programs: install_runtime_libs build_programs
 	@[ -n "$(INSTALLTOP)" ] || (echo INSTALLTOP should not be empty; exit 1)
-	@$(PERL) $(SRCDIR)/util/mkdir-p.pl $(DESTDIR)$(INSTALLTOP)/bin
+	@ : {- output_off() if $disabled{apps}; "" -}
+	{- join("\n\t", platform->install_dir(type => 'bin', silent => 1)); -}
 	@$(ECHO) "*** Installing runtime programs"
-	@set -e; for x in dummy $(INSTALL_PROGRAMS); do \
-		if [ "$$x" = "dummy" ]; then continue; fi; \
-		fn=`basename $$x`; \
-		$(ECHO) "install $$x -> $(DESTDIR)$(INSTALLTOP)/bin/$$fn"; \
-		cp $$x $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new; \
-		chmod 755 $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new; \
-		mv -f $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new \
-		      $(DESTDIR)$(INSTALLTOP)/bin/$$fn; \
-	done
-	@set -e; for x in dummy $(BIN_SCRIPTS); do \
-		if [ "$$x" = "dummy" ]; then continue; fi; \
-		fn=`basename $$x`; \
-		$(ECHO) "install $$x -> $(DESTDIR)$(INSTALLTOP)/bin/$$fn"; \
-		cp $$x $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new; \
-		chmod 755 $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new; \
-		mv -f $(DESTDIR)$(INSTALLTOP)/bin/$$fn.new \
-		      $(DESTDIR)$(INSTALLTOP)/bin/$$fn; \
-	done
+	{- join("\n\t",
+                map { platform->install_bin($_, type => 'bin', silent => 1) }
+                @install_programs); -}
+	{- join("\n\t",
+                platform->install_exec('$(BLDDIR)/tools/c_rehash',
+                                       type => 'bin', silent => 1)) -}
+	@ : {- output_on() if $disabled{apps}; "" -}
 
 uninstall_runtime: uninstall_programs uninstall_runtime_libs
 
 uninstall_programs:
 	@$(ECHO) "*** Uninstalling runtime programs"
-	@set -e; for x in dummy $(INSTALL_PROGRAMS); \
-	do  \
-		if [ "$$x" = "dummy" ]; then continue; fi; \
-		fn=`basename $$x`; \
-		$(ECHO) "$(RM) $(DESTDIR)$(INSTALLTOP)/bin/$$fn"; \
-		$(RM) $(DESTDIR)$(INSTALLTOP)/bin/$$fn; \
-	done;
-	@set -e; for x in dummy $(BIN_SCRIPTS); \
-	do  \
-		if [ "$$x" = "dummy" ]; then continue; fi; \
-		fn=`basename $$x`; \
-		$(ECHO) "$(RM) $(DESTDIR)$(INSTALLTOP)/bin/$$fn"; \
-		$(RM) $(DESTDIR)$(INSTALLTOP)/bin/$$fn; \
-	done
-	-$(RMDIR) $(DESTDIR)$(INSTALLTOP)/bin
+	{- join("\n\t",
+                map { platform->uninstall_bin($_, type => 'bin', silent => 1) }
+                @install_programs); -}
+	{- join("\n\t",
+                platform->uninstall_exec('$(BLDDIR)/tools/c_rehash',
+                                         type => 'bin', silent => 1)) -}
+	{- join("\n\t", platform->uninstall_dir(type => 'bin', silent => 1)); -}
 
 uninstall_runtime_libs:
 	@$(ECHO) "*** Uninstalling runtime libraries"
-	@ : {- output_off() unless windowsdll(); "" -}
-	@set -e; for s in dummy $(INSTALL_SHLIBS); do \
-		if [ "$$s" = "dummy" ]; then continue; fi; \
-		fn=`basename $$s`; \
-		$(ECHO) "$(RM) $(DESTDIR)$(INSTALLTOP)/bin/$$fn"; \
-		$(RM) $(DESTDIR)$(INSTALLTOP)/bin/$$fn; \
-	done
-	@ : {- output_on() unless windowsdll(); "" -}
-
+	{- join("\n\t",
+                map { platform->uninstall_lib($_, type => 'runtimelib',
+                                                  silent => 1) }
+                @install_libs); -}
+	{- join("\n\t", platform->uninstall_dir(type => 'runtimelib', silent => 1)); -}
 
 install_man_docs:
 	@[ -n "$(INSTALLTOP)" ] || (echo INSTALLTOP should not be empty; exit 1)
