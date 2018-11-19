@@ -60,6 +60,141 @@ sub convertext {
     return $_[1];
 }
 
+# Install functions ##################################################
+
+# Registered installation paths for different types of files
+my %install_paths = ();
+
+sub register_install_path {
+    my $self = shift;
+    my $path = shift;
+    my %opts = @_;
+
+    $install_paths{$opts{type}} = $path;
+}
+
+my %install_relocations = (
+    misc_script => 'misc',
+);
+
+sub get_install_path {
+    my $self = shift;
+    my $type = my $orig_type = shift;
+
+    while (defined $install_relocations{$type}) {
+        $type = $install_relocations{$type};
+    }
+
+    croak "No install path defined for $orig_type"
+        unless defined $install_paths{$type};
+
+    return $install_paths{$type};
+}
+
+#
+# Define the needed functions as abstracts
+#
+
+# First, the lower level bread and butter functions:
+
+# install_file is used to install any non-executable file
+sub install_file {
+    croak "platform->install_file not implemented\n";
+}
+
+# install_exec is used to install any executable file
+sub install_exec {
+    croak "platform->install_exec not implemented\n";
+}
+
+# install_alias is used to install an alias for another installed file
+sub install_alias {
+    croak "platform->install_alias not implemented\n";
+}
+
+# install_dir is used to install a directory
+sub install_dir {
+    croak "platform->install_dir not implemented\n";
+}
+
+# Now, for the more soffisticated functions.  These differ from the bread
+# and buffer functions by massaging the unified "file name" given to them
+# to the corresponding platform specific name.
+
+# install_lib is used to install a library
+# Apart from converting the unified "file name", it also figures out exactly
+# what files there are (both static and shared, in whatever variants they
+# come), and where they should go.  This may vary between systems.
+#
+# This default implementation is the simplest possible, it installs a static
+# library in the lib location as a normal file, and the shared library as an
+# executable file.
+sub install_lib {
+    my $self = shift;
+    my $libname = shift;
+    my %opts = @_;
+    my $at = $opts{silent} ? '@' : '';
+
+    return platform->install_file(platform->staticlib($libname),
+                                  %opts, type => 'lib')
+        if $opts{type} eq 'devlib';
+
+    my $shared_lib = platform->sharedlib($libname);
+    return platform->install_exec($shared_lib, %opts, type => 'lib')
+        if $opts{type} eq 'runtimelib' && $shared_lib;
+
+    croak "No library installer implemented for $opts{type}";
+}
+
+sub uninstall_lib {
+    my $self = shift;
+    my $libname = shift;
+    my %opts = @_;
+    my $at = $opts{silent} ? '@' : '';
+
+    return platform->uninstall_file(platform->staticlib($libname),
+                                    %opts, type => 'lib')
+        if $opts{type} eq 'devlib';
+
+    my $shared_lib = platform->sharedlib($libname);
+    return platform->uninstall_file($shared_lib, %opts, type => 'lib')
+        if $opts{type} eq 'runtimelib' && $shared_lib;
+
+    croak "No library uninstaller implemented for $opts{type}";
+}
+
+# install_dso is used to install a dynamically loadable module
+sub install_dso {
+    my $self = shift;
+    my $dsoname = shift;
+
+    return platform->install_exec(platform->dso($dsoname), @_);
+}
+
+sub uninstall_dso {
+    my $self = shift;
+    my $dsoname = shift;
+
+    return platform->uninstall_exec(platform->dso($dsoname), @_);
+}
+
+# install_bin is used to install a compiled program
+# Note that scripts should not be installed with this.  Use install_exec
+# directly for those...
+sub install_bin {
+    my $self = shift;
+    my $binname = shift;
+
+    return platform->install_exec(platform->bin($binname), @_);
+}
+
+sub uninstall_bin {
+    my $self = shift;
+    my $binname = shift;
+
+    return platform->uninstall_exec(platform->bin($binname), @_);
+}
+
 # Helpers ############################################################
 
 # __base EXPR, LIST
