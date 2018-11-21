@@ -38,38 +38,6 @@
       "";
   }
 
-  # Because we need to make two computations of these data,
-  # we store them in arrays for reuse
-  our @libs =
-      map { platform->staticname($_) }
-      @{$unified_info{libraries}};
-  our @shlibs =
-      map { platform->sharedname($_) // () }
-      @{$unified_info{libraries}};
-  our @install_libs =
-      map { platform->staticname($_) }
-      grep { !$unified_info{attributes}->{$_}->{noinst} }
-      @{$unified_info{libraries}};
-  our @install_shlibs =
-      map { platform->sharedname($_) // () }
-      grep { !$unified_info{attributes}->{$_}->{noinst} }
-      @{$unified_info{libraries}};
-  our @install_engines =
-      grep { !$unified_info{attributes}->{$_}->{noinst}
-             && $unified_info{attributes}->{$_}->{engine} }
-      @{$unified_info{modules}};
-  our @install_programs =
-      grep { !$unified_info{attributes}->{$_}->{noinst} }
-      @{$unified_info{programs}};
-  our @install_bin_scripts =
-      grep { !$unified_info{attributes}->{$_}->{noinst}
-             && !$unified_info{attributes}->{$_}->{misc} }
-      @{$unified_info{scripts}};
-  our @install_misc_scripts =
-      grep { !$unified_info{attributes}->{$_}->{noinst}
-             && $unified_info{attributes}->{$_}->{misc} }
-      @{$unified_info{scripts}};
-
   # This is a horrible hack, but is needed because recursive inclusion of files
   # in different directories does not work well with HP C.
   my $sd = sourcedir("crypto", "async", "arch");
@@ -121,30 +89,26 @@ MINOR={- $config{minor} -}
 SHLIB_VERSION_NUMBER={- $config{shlib_version} -}
 SHLIB_TARGET={- $target{shared_target} -}
 
-LIBS={- join(", ", map { "-\n\t".$_.".OLB" } @libs) -}
-SHLIBS={- join(", ", map { "-\n\t".$_.".EXE" } @shlibs) -}
-MODULES={- join(", ", map { "-\n\t".$_.".EXE" } @{$unified_info{modules}}) -}
-PROGRAMS={- join(", ", map { "-\n\t".$_.".EXE" } @{$unified_info{programs}}) -}
-SCRIPTS={- join(", ", map { "-\n\t".$_ } @{$unified_info{scripts}}) -}
+LIBS={- join(", ", map { "-\n\t".$_ }
+                   map { ( platform->sharedlib_import($_),
+                           platform->staticlib($_) ) }
+                   @libs) -}
+SHLIBS={- join(", ", map { "-\n\t".$_ }
+                     map { platform->sharedlib($_) // () }
+                     @shlibs) -}
+MODULES={- join(", ", map { "-\n\t".$_ }
+                      map { platform->dso($_) }
+                      @{$unified_info{modules}}) -}
+PROGRAMS={- join(", ", map { "-\n\t".$_ }
+                       map { platform->bin($_) }
+                       @{$unified_info{programs}}) -}
+SCRIPTS={- join(", ", map { "-\n\t".$_ } @scripts) -}
 {- output_off() if $disabled{makedepend}; "" -}
-DEPS={- our @deps = map { platform->isobj($_) ? platform->dep($_) : $_ }
-                    grep { $unified_info{sources}->{$_}->[0] =~ /\.c$/ }
-                    keys %{$unified_info{sources}};
-        join(", ", map { "-\n\t".$_ } @deps); -}
+DEPS={- join(", ", map { "-\n\t".$_ } @deps); -}
 {- output_on() if $disabled{makedepend}; "" -}
 GENERATED_MANDATORY={- join(", ", map { "-\n\t".$_ } @{$unified_info{depends}->{""}} ) -}
 GENERATED={- # common0.tmpl provides @generated
              join(", ", map { platform->convertext($_) } @generated) -}
-
-INSTALL_LIBS={- join(", ", map { "-\n\t".$_.".OLB" } @install_libs) -}
-INSTALL_SHLIBS={- join(", ", map { "-\n\t".$_.".EXE" } @install_shlibs) -}
-INSTALL_ENGINES={- join(", ", map { "-\n\t".$_.".EXE" } @install_engines) -}
-INSTALL_PROGRAMS={- join(", ", map { "-\n\t".$_.".EXE" } @install_programs) -}
-BIN_SCRIPTS={- join(", ", @install_bin_scripts) -}
-MISC_SCRIPTS={- join(", ", @install_misc_scripts) -}
-
-APPS_OPENSSL={- use File::Spec::Functions;
-                catfile("apps","openssl") -}
 
 # DESTDIR is for package builders so that they can configure for, say,
 # SYS$COMMON:[OPENSSL] and yet have everything installed in STAGING:[USER].
@@ -517,7 +481,30 @@ descrip.mms : FORCE
 	@ ! {- output_on() if $disabled{makedepend}; "" -}
 
 # Install helper targets #############################################
+{-
+    platform->register_install_path('OSSL_INSTALLROOT:[INCLUDE.OPENSSL]',
+                                    type => 'header');
+    platform->register_install_path("OSSL_INSTALLROOT:[LIB.'arch']",
+                                    type => 'lib');
 
+    platform->register_install_path("OSSL_INSTALLROOT:[EXE.'arch']",
+                                    type => 'bin');
+
+    platform->register_install_path("OSSL_INSTALLROOT:[ENGINES$sover_dirname$target{pointer_size}.'arch']",
+                                    type => 'engine');
+
+    platform->register_install_path('OSSL_DATAROOT:[000000]', type => 'conf');
+    platform->register_install_path('OSSL_DATAROOT:[CERTS]', type => 'certs');
+    platform->register_install_path('OSSL_DATAROOT:[PRIVATE]',
+                                    type => 'private');
+    platform->register_install_path('OSSL_DATAROOT:[MISC]', type => 'misc');
+
+    platform->register_install_path('ossl_installroot:[SYS$STARTUP]',
+                                    type => 'systartup');
+    platform->register_install_path('ossl_installroot:[SYSTEST]',
+                                    type => 'systest');
+    "";
+-}
 install_sw : install_dev install_engines install_runtime -
              install_startup install_ivp
 
@@ -529,45 +516,43 @@ install_docs : install_html_docs
 uninstall_docs : uninstall_html_docs
 
 install_ssldirs : check_INSTALLTOP
-        - CREATE/DIR/PROT=(S:RWED,O:RWE,G:RE,W:RE) OSSL_DATAROOT:[000000]
-        IF F$SEARCH("OSSL_DATAROOT:[000000]CERTS.DIR;1") .EQS. "" THEN -
-                CREATE/DIR/PROT=(S:RWED,O:RWE,G:RE,W:RE) OSSL_DATAROOT:[CERTS]
-        IF F$SEARCH("OSSL_DATAROOT:[000000]PRIVATE.DIR;1") .EQS. "" THEN -
-                CREATE/DIR/PROT=(S:RWED,O:RWE,G,W) OSSL_DATAROOT:[PRIVATE]
-        IF F$SEARCH("OSSL_DATAROOT:[000000]MISC.DIR;1") .EQS. "" THEN -
-                CREATE/DIR/PROT=(S:RWED,O:RWE,G,W) OSSL_DATAROOT:[MISC]
-        COPY/PROT=W:RE $(MISC_SCRIPTS) OSSL_DATAROOT:[MISC]
-        @ ! Install configuration file
-        COPY/PROT=W:R {- sourcefile("apps", "openssl-vms.cnf") -} -
-                ossl_dataroot:[000000]openssl.cnf-dist
-        IF F$SEARCH("OSSL_DATAROOT:[000000]openssl.cnf") .EQS. "" THEN -
-                COPY/PROT=W:R {- sourcefile("apps", "openssl-vms.cnf") -} -
-                        ossl_dataroot:[000000]openssl.cnf
-        @ ! Install CTLOG configuration file
-        COPY/PROT=W:R {- sourcefile("apps", "ct_log_list.cnf") -} -
-                ossl_dataroot:[000000]ct_log_list.cnf-dist
-        IF F$SEARCH("OSSL_DATAROOT:[000000]ct_log_list.cnf") .EQS. "" THEN -
-                COPY/PROT=W:R {- sourcefile("apps", "ct_log_list.cnf") -} -
-                        ossl_dataroot:[000000]ct_log_list.cnf
+	{- join("\n\t",
+                platform->install_dir(type => 'conf'),
+                platform->install_dir(type => 'certs'),
+                platform->install_dir(type => 'private', private => 1),
+                platform->install_dir(type => 'misc', private => 1)); -}
+        @ ! Install configuration files
+	{- join("\n\t",
+                platform->install_file(sourcefile('apps', 'openssl-vms.cnf'),
+                                       dstfile => 'openssl.cnf',
+                                       type => 'conf')); -}
+	{- join("\n\t",
+                platform->install_file(sourcefile('apps', 'ct_log_list.cnf'),
+                                       type => 'conf')); -}
+        @ ! Install misc scripts
+	{- join("\n\t",
+                platform->install_exec(buildfile('apps', 'CA.pl'),
+                                       type => 'misc'),
+                platform->install_exec(buildfile('apps', 'tsget.pl'),
+                                       type => 'misc')) -}
 
 install_dev : check_INSTALLTOP install_runtime_libs
         @ WRITE SYS$OUTPUT "*** Installing development files"
         @ ! Install header files
-        - CREATE/DIR ossl_installroot:[include.openssl]
-        COPY/PROT=W:R openssl:*.h ossl_installroot:[include.openssl]
+	{- join("\n\t", platform->install_dir(type => 'header')); -}
+	{- join("\n\t", platform->install_file('openssl:*.h',
+                                               type => 'header')); -};
         @ ! Install static (development) libraries
-        - CREATE/DIR ossl_installroot:[LIB.'arch']
-        {- join("\n        ",
-                map { "COPY/PROT=W:R $_.OLB ossl_installroot:[LIB.'arch']" }
-                @install_libs) -}
+	{- join("\n\t", platform->install_dir(type => 'devlib')); -}
+	{- join("\n\t", map { platform->install_lib($_, type => 'devlib') }
+                        @install_libs); -}
 
-install_engines : check_INSTALLTOP install_runtime_libs build_modules
+install_engines : check_INSTALLTOP install_runtime_libs build_engines
         @ {- output_off() unless scalar @install_engines; "" -} !
-        @ WRITE SYS$OUTPUT "*** Installing ENGINE modules"
-        - CREATE/DIR ossl_installroot:[ENGINES{- $sover_dirname.$target{pointer_size} -}.'arch']
-        {- join("\n        ",
-                map { "COPY/PROT=W:RE $_.EXE ossl_installroot:[ENGINES$sover_dirname$target{pointer_size}.'arch']" }
-                @install_engines) -}
+        @ WRITE SYS$OUTPUT "*** Installing engines"
+	{- join("\n\t", platform->install_dir(type => 'engine')); -}
+	{- join("\n\t", map { platform->install_dso($_, type => 'engine') }
+                        @install_engines); -}
         @ {- output_on() unless scalar @install_engines; "" -} !
 
 install_runtime : install_programs
@@ -576,36 +561,40 @@ install_runtime_libs : check_INSTALLTOP build_libs
         @ {- output_off() if $disabled{shared}; "" -} !
         @ WRITE SYS$OUTPUT "*** Installing shareable images"
         @ ! Install shared (runtime) libraries
-        - CREATE/DIR ossl_installroot:[LIB.'arch']
-        {- join("\n        ",
-                map { "COPY/PROT=W:R $_.EXE ossl_installroot:[LIB.'arch']" }
-                @install_shlibs) -}
+	{- join("\n\t", platform->install_dir(type => 'runtimelib')); -}
+	{- join("\n\t", map { platform->install_lib($_, type => 'runtimelib') }
+                        @install_shlibs); -}
         @ {- output_on() if $disabled{shared}; "" -} !
 
 install_programs : check_INSTALLTOP install_runtime_libs build_programs
         @ {- output_off() if $disabled{apps}; "" -} !
         @ ! Install the main program
-        - CREATE/DIR ossl_installroot:[EXE.'arch']
-        COPY/PROT=W:RE [.APPS]openssl.EXE -
-                ossl_installroot:[EXE.'arch']openssl{- $osslver -}.EXE
+	{- join("\n\t", platform->install_dir(type => 'bin')); -}
+	{- join("\n\t", map { platform->install_bin($_, type => 'bin') }
+                        @install_programs); -}
         @ ! Install scripts
-        COPY/PROT=W:RE $(BIN_SCRIPTS) ossl_installroot:[EXE]
+	{- join("\n\t", platform->install_exec('[.tools]c_rehash.pl',
+                                               type => 'bin')) -}
         @ ! {- output_on() if $disabled{apps}; "" -}
 
 install_startup : [.VMS]openssl_startup.com [.VMS]openssl_shutdown.com -
                  [.VMS]openssl_utils.com, check_INSTALLTOP
-        - CREATE/DIR ossl_installroot:[SYS$STARTUP]
-        COPY/PROT=W:RE [.VMS]openssl_startup.com -
-                ossl_installroot:[SYS$STARTUP]openssl_startup{- $osslver -}.com
-        COPY/PROT=W:RE [.VMS]openssl_shutdown.com -
-                ossl_installroot:[SYS$STARTUP]openssl_shutdown{- $osslver -}.com
-        COPY/PROT=W:RE [.VMS]openssl_utils.com -
-                ossl_installroot:[SYS$STARTUP]openssl_utils{- $osslver -}.com
+	{- join("\n\t", platform->install_dir(type => 'systartup')); -}
+        {- join("\n\t", # Insert the OpenSSL version marker before the extension
+                        map { my $x = basename($_, '.com') . "$osslver.com";
+                              platform->install_exec($_, dstfile => $x,
+                                                     type => 'systartup') }
+                        '[.VMS]openssl_startup.com',
+                        '[.VMS]openssl_shutdown.com',
+                        '[.VMS]openssl_utils.com') -}
 
 install_ivp : [.VMS]openssl_ivp.com check_INSTALLTOP
-        - CREATE/DIR ossl_installroot:[SYSTEST]
-        COPY/PROT=W:RE [.VMS]openssl_ivp.com -
-                ossl_installroot:[SYSTEST]openssl_ivp{- $osslver -}.com
+	{- join("\n\t", platform->install_dir(type => 'systest')); -}
+        {- join("\n\t", # Insert the OpenSSL version marker before the extension
+                        map { my $x = basename($_, '.com') . "$osslver.com";
+                              platform->install_exec($_, dstfile => $x,
+                                                     type => 'systartup') }
+                        '[.VMS]openssl_ivp.com'); -}
 
 [.VMS]openssl_startup.com : vmsconfig.pm {- sourcefile("VMS", "openssl_startup.com.in") -}
         - CREATE/DIR [.VMS]
