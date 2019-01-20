@@ -199,6 +199,40 @@ OSSL_core_make_func(OSSL_ALGORITHM *,provider_query_operation,
                     (const OSSL_PROVIDER *, int /* operation id */,
                      int * /* no_cache */))
 
+/*
+ * Operation identities, used with the provider query_operation function to
+ * get the array of algorithm implementations for that operation.
+ */
+#define OSSL_OP_DIGEST                         1
+#define OSSL_OP_SYM_ENCRYPT                    2
+#define OSSL_OP_SEAL                           3
+#define OSSL_OP_DIGEST_SIGN                    4
+#define OSSL_OP_SIGN                           5
+#define OSSL_OP_ASYM_KEYGEN                    6
+#define OSSL_OP_ASYM_PARAMGEN                  7
+#define OSSL_OP_ASYM_ENCRYPT                   8
+#define OSSL_OP_ASYM_SIGN                      9
+#define OSSL_OP_ASYM_DERIVE                   10
+
+/*
+ * Operation function identities, for the OSSL_DISPATCH tables wrapped
+ * in OSSL_ALGORITHM
+ * The names of the identity macros are slightly different than the Core
+ * identities, by having _FUNC last.
+ */
+#define OSSL_OP_DIGEST_NEWCTX_FUNC           201
+OSSL_core_make_func(void *,OP_digest_newctx,(void))
+#define OSSL_OP_DIGEST_INIT_FUNC             202
+OSSL_core_make_func(int,OP_digest_init,(/* FIXME: To be determined */void))
+#define OSSL_OP_DIGEST_UPDATE_FUNC           203
+OSSL_core_make_func(int,OP_digest_update,(/* FIXME: To be determined */void))
+#define OSSL_OP_DIGEST_FINAL_FUNC            204
+OSSL_core_make_func(int,OP_digest_final,(/* FIXME: To be determined */void))
+#define OSSL_OP_DIGEST_CLEANCTX_FUNC          205
+OSSL_core_make_func(void,OP_digest_cleanctx,(void *))
+#define OSSL_OP_DIGEST_FREECTX_FUNC          205
+OSSL_core_make_func(void,OP_digest_freectx,(void *))
+
 # ifdef __cplusplus
 }
 # endif
