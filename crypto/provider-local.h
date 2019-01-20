@@ -17,4 +17,5 @@ struct ossl_provider_st {
     DSO *module;
     OSSL_provider_teardown_fn *teardown;
     OSSL_provider_get_params_fn *get_params;
+    OSSL_provider_query_operation_fn *query_operation;
 };

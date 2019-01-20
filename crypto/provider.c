@@ -46,6 +46,10 @@ OSSL_PROVIDER *ossl_provider_new(DSO *dso, ossl_provider_init_fn *init_function)
         prov->module = dso;
         for (; provider_dispatch->function_id != 0; provider_dispatch++) {
             switch (provider_dispatch->function_id) {
+            case OSSL_FUNC_PROVIDER_QUERY_OPERATION:
+                prov->query_operation =
+                    OSSL_get_provider_query_operation(provider_dispatch);
+                break;
             case OSSL_FUNC_PROVIDER_TEARDOWN:
                 prov->teardown =
                     OSSL_get_provider_teardown(provider_dispatch);
@@ -118,4 +122,11 @@ int ossl_provider_get_params(const OSSL_PROVIDER *prov,
                              const OSSL_PARAM params[])
 {
     return prov->get_params(params);
+}
+
+OSSL_ALGORITHM *ossl_provider_query_operation(const OSSL_PROVIDER *prov,
+                                              int operation_id,
+                                              int *no_cache)
+{
+    return prov->query_operation(prov, operation_id, no_cache);
 }

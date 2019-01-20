@@ -35,6 +35,8 @@ const char *ossl_provider_name(OSSL_PROVIDER *prov);
 void ossl_provider_teardown(const OSSL_PROVIDER *prov);
 int ossl_provider_get_params(const OSSL_PROVIDER *prov,
                              const OSSL_PARAM params[]);
+OSSL_ALGORITHM *ossl_provider_query_operation(const OSSL_PROVIDER *prov,
+                                              int operation_id, int *no_cache);
 
 # ifdef __cplusplus
 }

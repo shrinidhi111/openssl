@@ -194,6 +194,10 @@ const OSSL_PROVIDER *OSSL_unload_provider(OPENSSL_CTX *,
 OSSL_core_make_func(void,provider_teardown,(void))
 # define OSSL_FUNC_PROVIDER_GET_PARAMS       102
 OSSL_core_make_func(int,provider_get_params,(const OSSL_PARAM params[]))
+# define OSSL_FUNC_PROVIDER_QUERY_OPERATION  103
+OSSL_core_make_func(OSSL_ALGORITHM *,provider_query_operation,
+                    (const OSSL_PROVIDER *, int /* operation id */,
+                     int * /* no_cache */))
 
 # ifdef __cplusplus
 }
