@@ -11,6 +11,7 @@
 # define OSSL_CORE_H
 
 # include <stddef.h>
+# include <openssl/ossl_typ.h>
 
 # ifdef __cplusplus
 extern "C" {
@@ -123,6 +124,68 @@ struct ossl_param_st {
  */
 # define OSSL_PARAM_UTF8_STRING_PTR      6
 # define OSSL_PARAM_OCTET_STRING_PTR     7
+
+/*-
+ * Provider entry point
+ * --------------------
+ *
+ * This function is expected to be present in any dynamically loadable
+ * provider module.  By definition, if this function doesn't exist in a
+ * module, that module is not an OpenSSL provider module.
+ */
+/*-
+ * |provider|   pointer to opaque type OSSL_PROVIDER.  This can be used
+ *              together with some functions passed via |in| to query data.
+ * |in|         is the array of functions that the Core passes to the provider.
+ * |out|        will be the array of base functions that the provider passes
+ *              back to the Core.
+ */
+typedef int (ossl_provider_init_fn)(const OSSL_PROVIDER *provider,
+                                    const OSSL_DISPATCH *in,
+                                    const OSSL_DISPATCH **out);
+extern ossl_provider_init_fn OSSL_provider_init;
+
+/*-
+ * Identities
+ * ----------
+ *
+ * All series start with 1, to allow 0 to be an array terminator.
+ * For any FUNC identity, we also provide a function signature typedef
+ * and a static inline function to extract a function pointer from a
+ * OSSL_DISPATCH element in a type safe manner.
+ *
+ * Names:
+ * for any function base name 'foo' (uppercase form 'FOO'), we will have
+ * the following:
+ * - a macro for the identity with the name OSSL_FUNC_'FOO' or derivates
+ *   thereof (to be specified further down)
+ * - a function signature typedef with the name OSSL_'foo'_fn
+ * - a function pointer extractor function with the name OSSL_'foo'
+ */
+
+/* Helper macro to create the function signature typedef and the extractor */
+#define OSSL_core_make_func(type,name,args)                             \
+    typedef type (OSSL_##name##_fn)args;                                \
+    static inline OSSL_##name##_fn *OSSL_get_##name(const OSSL_DISPATCH *opf) \
+    {                                                                   \
+        return (OSSL_##name##_fn *)opf->function;                       \
+    }
+
+/*
+ * Core function identities, for the two OSSL_DISPATCH tables being passed
+ * in the OSSL_provider_init call.
+ *
+ * 0 serves as a marker for the end of the OSSL_DISPATCH array, and must
+ * therefore NEVER be used as a function identity.
+ */
+/* Functions provided by the Core to the provider, reserved numbers 1-100 */
+/* NONE DEFINED YET */
+
+/* Functions provided by the provider to the Core, reserved numbers 101-200 */
+# define OSSL_FUNC_PROVIDER_TEARDOWN         101
+OSSL_core_make_func(void,provider_teardown,(void))
+# define OSSL_FUNC_PROVIDER_GET_PARAMS       102
+OSSL_core_make_func(int,provider_get_params,(const OSSL_PARAM params[]))
 
 # ifdef __cplusplus
 }
