@@ -4631,3 +4631,5 @@ CMS_add1_signing_cert_v2                4586	3_0_0	EXIST::FUNCTION:CMS
 ESS_SIGNING_CERT_new_init               4587	3_0_0	EXIST::FUNCTION:
 ESS_SIGNING_CERT_V2_new_init            4588	3_0_0	EXIST::FUNCTION:
 ERR_load_ESS_strings                    4589	3_0_0	EXIST::FUNCTION:
+OSSL_load_provider                      4590	3_0_0	EXIST::FUNCTION:
+OSSL_unload_provider                    4591	3_0_0	EXIST::FUNCTION:

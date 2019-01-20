@@ -146,6 +146,14 @@ typedef int (ossl_provider_init_fn)(const OSSL_PROVIDER *provider,
 extern ossl_provider_init_fn OSSL_provider_init;
 
 /*-
+ * Load a provider
+ * ---------------
+ */
+const OSSL_PROVIDER *OSSL_load_provider(OPENSSL_CTX *, const char *module_name);
+const OSSL_PROVIDER *OSSL_unload_provider(OPENSSL_CTX *,
+                                          const char *module_name);
+
+/*-
  * Identities
  * ----------
  *
