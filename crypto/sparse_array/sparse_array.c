@@ -11,7 +11,11 @@
 #include <openssl/crypto.h>
 #include "internal/sparse_array.h"
 
+#ifdef OPENSSL_SMALL_FOOTPRINT
 #define SA_BLOCK_BITS           4
+#else
+#define SA_BLOCK_BITS           12
+#endif
 #define SA_BLOCK_MAX            (1 << SA_BLOCK_BITS)
 #define SA_BLOCK_MASK           (SA_BLOCK_MAX - 1)
 #define SA_BLOCK_MAX_LEVELS     (((int)sizeof(size_t) * 8 + SA_BLOCK_BITS - 1) \
