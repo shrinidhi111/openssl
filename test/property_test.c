@@ -286,7 +286,7 @@ static int test_property(void)
     };
     size_t i;
     int ret = 0;
-    const void *result;
+    void *result;
 
     if (!TEST_true(ossl_impl_store_init())
         || !add_property_names("fast", "colour", "sky", "furry", NULL))

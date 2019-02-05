@@ -18,6 +18,7 @@
 #include <openssl/rand.h>
 #include <internal/lhash.h>
 #include <internal/sparse_array.h>
+#include "internal/thread_once.h"
 #include "property_lcl.h"
 
 /* The number of elements in the query cache before we initiate a flush */
@@ -45,6 +46,8 @@ typedef struct {
     LHASH_OF(QUERY) *cache;
 } ALGORITHM;
 
+DEFINE_SPARSE_ARRAY_OF(ALGORITHM);
+
 struct ossl_impl_store_st {
     size_t nelem;
     SPARSE_ARRAY_OF(ALGORITHM) *algs;
@@ -60,28 +63,45 @@ typedef struct {
     size_t nelem;
 } IMPL_CACHE_FLUSH;
 
-DEFINE_SPARSE_ARRAY_OF(ALGORITHM);
+int ossl_impl_store_init(void);
+void ossl_impl_store_cleanup(void);
 
 static OSSL_IMPL_STORE *g_implementations = NULL;
+static CRYPTO_ONCE implementations_init = CRYPTO_ONCE_STATIC_INIT;
+DEFINE_RUN_ONCE_STATIC(do_implementations_init)
+{
+    return OPENSSL_init_crypto(0, NULL)
+        && ossl_impl_store_init()
+        && OPENSSL_atexit(ossl_impl_store_cleanup);
+}
 
 int ossl_property_read_lock(OSSL_IMPL_STORE *p)
 {
-    if (p == NULL)
+    if (p == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         p = g_implementations;
+    }
     return CRYPTO_THREAD_read_lock(p->lock);
 }
 
 int ossl_property_write_lock(OSSL_IMPL_STORE *p)
 {
-    if (p == NULL)
+    if (p == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         p = g_implementations;
+    }
     return CRYPTO_THREAD_write_lock(p->lock);
 }
 
 int ossl_property_unlock(OSSL_IMPL_STORE *p)
 {
-    if (p == NULL)
+    if (p == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         p = g_implementations;
+    }
     return CRYPTO_THREAD_unlock(p->lock);
 }
 
@@ -189,8 +209,11 @@ int ossl_impl_store_add(OSSL_IMPL_STORE *impls,
         return 0;
     if (properties == NULL)
         properties = "";
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         impls = g_implementations;
+    }
 
     /* Create new entry */
     impl = OPENSSL_malloc(sizeof(*impl));
@@ -246,8 +269,11 @@ int ossl_impl_store_remove(OSSL_IMPL_STORE *impls,
 
     if (nid <= 0 || implementation == NULL)
         return 0;
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         impls = g_implementations;
+    }
 
     /* Only a read lock because no attempt is made to clean up empty stacks */
     ossl_property_write_lock(impls);
@@ -278,7 +304,7 @@ int ossl_impl_store_remove(OSSL_IMPL_STORE *impls,
 
 int ossl_impl_store_fetch(OSSL_IMPL_STORE *impls,
                           int nid, const PROPERTY_LIST *properties,
-                          const void **result)
+                          void **result)
 {
     ALGORITHM *alg;
     IMPLEMENTATION *impl;
@@ -287,8 +313,11 @@ int ossl_impl_store_fetch(OSSL_IMPL_STORE *impls,
 
     if (nid <= 0 || result == NULL)
         return 0;
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         impls = g_implementations;
+    }
 
     /*
      * This only needs to be a read lock, because queries never create property
@@ -334,8 +363,11 @@ void ossl_impl_cache_flush(OSSL_IMPL_STORE *impls, int nid)
 
     if (nid <= 0)
         return;
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return;
         impls = g_implementations;
+    }
     if ((alg = ossl_impl_store_retrieve(impls, nid)) != NULL) {
         impls->nelem -= lh_QUERY_num_items(alg->cache);
         impl_cache_flush_alg(alg);
@@ -344,8 +376,11 @@ void ossl_impl_cache_flush(OSSL_IMPL_STORE *impls, int nid)
 
 void ossl_impl_cache_flush_all(OSSL_IMPL_STORE *impls)
 {
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return;
         impls = g_implementations;
+    }
 
     sa_ALGORITHM_doall(impls->algs, &impl_cache_flush_alg);
     impls->nelem = 0;
@@ -398,8 +433,11 @@ int ossl_impl_cache_get(OSSL_IMPL_STORE *impls, int nid, const char *prop,
 
     if (nid <= 0)
         return 0;
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         impls = g_implementations;
+    }
 
     ossl_property_read_lock(impls);
     alg = ossl_impl_store_retrieve(impls, nid);
@@ -430,8 +468,11 @@ int ossl_impl_cache_set(OSSL_IMPL_STORE *impls, int nid, const char *prop,
         return 0;
     if (prop == NULL)
         return 1;
-    if (impls == NULL)
+    if (impls == NULL) {
+        if (!RUN_ONCE(&implementations_init, do_implementations_init))
+            return 0;
         impls = g_implementations;
+    }
 
     ossl_property_write_lock(impls);
     if (impls->need_flush)

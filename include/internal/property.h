@@ -27,7 +27,7 @@ int ossl_impl_store_remove(OSSL_IMPL_STORE *cache,
                            int nid, const void *implementation);
 int ossl_impl_store_fetch(OSSL_IMPL_STORE *cache,
                           int nid, const PROPERTY_LIST *properties,
-                          const void **result);
+                          void **result);
 
 /* Property list functions */
 void ossl_property_free(PROPERTY_LIST *p);
