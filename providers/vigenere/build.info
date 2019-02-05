@@ -1,0 +1,5 @@
+MODULES=../p_vigenere
+INCLUDE[../p_vigenere]=../../include
+SOURCE[../p_vigenere]=vigenere.c
+SHARED_SOURCE[../p_vigenere]=vigenere.ld
+GENERATE[vigenere.ld]=../provider.num

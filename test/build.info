@@ -653,3 +653,8 @@ _____
 _____
    }
 -}
+
+PROGRAMS{noinst}=vigenere_test
+SOURCE[vigenere_test]=vigenere_test.c
+INCLUDE[vigenere_test]=../include ../apps/include
+DEPEND[vigenere_test]=../libcrypto libtestutil.a
