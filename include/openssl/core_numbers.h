@@ -106,6 +106,34 @@ OSSL_CORE_MAKE_FUNC(void,OP_digest_cleanctx,(void *))
 #define OSSL_OP_DIGEST_FREECTX_FUNC         1541
 OSSL_CORE_MAKE_FUNC(void,OP_digest_freectx,(void *))
 
+
+/*
+ * Question is if the init functions should take an OSSL_PARAM array instead
+ * of key and iv.  What other parameters are going to be interesting in the
+ * future?
+ */
+#define OSSL_OP_SYM_ENCRYPT_NEWCTX_FUNC     1542
+OSSL_CORE_MAKE_FUNC(void *,OP_encrypt_newctx,(void))
+#define OSSL_OP_SYM_ENCRYPT_INIT_FUNC       1543
+OSSL_CORE_MAKE_FUNC(int,OP_encrypt_init,(void *vctx,
+                                         const void *key, size_t keyl,
+                                         const void *iv, size_t ivl))
+#define OSSL_OP_SYM_DECRYPT_INIT_FUNC       1544
+OSSL_CORE_MAKE_FUNC(int,OP_decrypt_init,(void *vctx,
+                                         const void *key, size_t keyl,
+                                         const void *iv, size_t ivl))
+#define OSSL_OP_SYM_ENCRYPT_UPDATE_FUNC     1545
+OSSL_CORE_MAKE_FUNC(int,OP_encrypt_update,(void *vctx, void *out,
+                                           size_t outsz, size_t *outl,
+                                           const void *in, size_t inl))
+#define OSSL_OP_SYM_ENCRYPT_FINAL_FUNC      1546
+OSSL_CORE_MAKE_FUNC(int,OP_encrypt_final,(void *vctx, void *out,
+                                          size_t outsz, size_t *outl))
+#define OSSL_OP_SYM_ENCRYPT_CLEANCTX_FUNC   1547
+OSSL_CORE_MAKE_FUNC(void,OP_encrypt_cleanctx,(void *vctx))
+#define OSSL_OP_SYM_ENCRYPT_FREECTX_FUNC    1548
+OSSL_CORE_MAKE_FUNC(void,OP_encrypt_freectx,(void *vctx))
+
 # ifdef __cplusplus
 }
 # endif

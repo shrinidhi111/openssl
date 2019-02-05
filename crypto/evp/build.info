@@ -18,7 +18,7 @@ SOURCE[../../libcrypto]=\
 
 # New design
 SOURCE[../../libcrypto]=\
-	evp_fetch.c
+	evp_fetch.c new_enc.c
 
 INCLUDE[e_aes.o]=.. ../modes
 INCLUDE[e_aes_cbc_hmac_sha1.o]=../modes
