@@ -95,4 +95,11 @@ uint32_t OPENSSL_rdtsc(void);
 size_t OPENSSL_instrument_bus(unsigned int *, size_t);
 size_t OPENSSL_instrument_bus2(unsigned int *, size_t, size_t);
 
+#include "internal/property.h"
+
+int ossl_default_properties_read_lock(OPENSSL_CTX *);
+int ossl_default_properties_write_lock(OPENSSL_CTX *);
+int ossl_default_properties_unlock(OPENSSL_CTX *);
+const PROPERTY_LIST *ossl_get_default_properties(OPENSSL_CTX *);
+
 #endif
