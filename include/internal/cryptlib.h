@@ -104,4 +104,11 @@ int openssl_ctx_new_index(const OPENSSL_CTX_METHOD *);
 /* Functions to retrieve pointers to data by index */
 void *openssl_ctx_get_data(OPENSSL_CTX *, int /* index */);
 
+#include "internal/property.h"
+
+int ossl_default_properties_read_lock(OPENSSL_CTX *);
+int ossl_default_properties_write_lock(OPENSSL_CTX *);
+int ossl_default_properties_unlock(OPENSSL_CTX *);
+const PROPERTY_LIST *ossl_get_default_properties(OPENSSL_CTX *);
+
 #endif
