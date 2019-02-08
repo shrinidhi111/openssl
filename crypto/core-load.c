@@ -17,9 +17,10 @@
 
 /* Provider store, mostly to avoid duplication */
 typedef struct {
-    char *module_name;
+    char *name;
     ossl_provider_init_fn *init_function;
     OSSL_PROVIDER *provider;
+    unsigned int provider_initialized:1;
 } STORED_PROVIDER;
 DEFINE_STACK_OF(STORED_PROVIDER)
 
@@ -29,22 +30,28 @@ struct provider_store_st {
     CRYPTO_RWLOCK *lock;
 };
 
-static STORED_PROVIDER *stored_provider_new(const char *module_name,
-                                            ossl_provider_init_fn
-                                            *init_function)
+static STORED_PROVIDER *stored_provider_new(const char *name,
+                                            ossl_provider_init_fn *init_func,
+                                            OSSL_PROVIDER *prov)
 {
     STORED_PROVIDER *ret = OPENSSL_zalloc(sizeof(*ret));
 
     if (ret != NULL) {
-        ret->module_name = OPENSSL_strdup(module_name);
-        ret->init_function = init_function;
+        ret->name = OPENSSL_strdup(name);
+        ret->init_function = init_func;
+        ret->provider = prov;
+        ret->provider_initialized = 0;
+    }
+    if (ret->name == NULL) {
+        OPENSSL_free(ret);
+        ret = NULL;
     }
     return ret;
 }
 
 static void stored_provider_free(STORED_PROVIDER *elem)
 {
-    OPENSSL_free(elem->module_name);
+    OPENSSL_free(elem->name);
     ossl_provider_free(elem->provider);
     OPENSSL_free(elem);
 }
@@ -114,133 +121,96 @@ static struct provider_store_st *get_provider_store(OPENSSL_CTX *ctx)
     return store;
 }
 
-static OSSL_PROVIDER *find_provider_unlocked(OPENSSL_CTX *ctx,
-                                             const char *module_name,
-                                             ossl_provider_init_fn
-                                             *init_function)
-{
-    int i;
-    struct provider_store_st *store = get_provider_store(ctx);
-
-    for (i = 0; i < sk_STORED_PROVIDER_num(store->store); i++) {
-        const STORED_PROVIDER *val =
-            sk_STORED_PROVIDER_value(store->store, i);
-
-        if (strcmp(val->module_name, module_name) == 0
-            && val->init_function == init_function) {
-            return val->provider;
-        }
-    }
-    return NULL;
-}
-
 /* The provider loader itself */
-OSSL_PROVIDER *ossl_core_load_provider(OPENSSL_CTX *ctx,
-                                       const char *module_name,
-                                       ossl_provider_init_fn *init_function)
+static STORED_PROVIDER *load_provider(OPENSSL_CTX *ctx, const char *name)
 {
     char *platform_module_name = NULL;
     char *module_path = NULL;
     DSO *module = NULL;
+    ossl_provider_init_fn *init_function = NULL;
+    const char *load_dir = ossl_safe_getenv("OPENSSL_MODULES");
     OSSL_PROVIDER *provider = NULL;
     STORED_PROVIDER *stored_provider = NULL;
+
+    module = DSO_new();
+
+    if (module == NULL)
+        return NULL;
+
+    if (load_dir == NULL)
+        load_dir = MODULESDIR;
+
+    DSO_ctrl(module, DSO_CTRL_SET_FLAGS, DSO_FLAG_NAME_TRANSLATION_EXT_ONLY,
+             NULL);
+    if ((platform_module_name = DSO_convert_filename(module, name)) == NULL
+        || (module_path =
+            DSO_merge(module, platform_module_name, load_dir)) == NULL
+        || DSO_load(module, module_path, NULL,
+                    DSO_FLAG_NAME_TRANSLATION_EXT_ONLY) == NULL
+        || (init_function = (ossl_provider_init_fn *)
+            DSO_bind_func(module, "OSSL_provider_init")) == NULL
+        || (provider = ossl_provider_new(module)) == NULL
+        || (stored_provider =
+            stored_provider_new(name, init_function, provider)) == NULL) {
+        DSO_free(module);
+        ossl_provider_free(provider);
+    }
+
+    OPENSSL_free(platform_module_name);
+    OPENSSL_free(module_path);
+    return stored_provider;
+}
+
+static int store_provider(OPENSSL_CTX *ctx, STORED_PROVIDER *stored_provider)
+{
     struct provider_store_st *store = get_provider_store(ctx);
 
-    if (!ossl_assert((module_name != NULL && init_function == NULL)
-                     || (module_name == NULL && init_function != NULL)))
-        return NULL;
-
-    if (!RUN_ONCE(&provider_store_init_flag, do_provider_store_init))
-        return NULL;
+    if (stored_provider == NULL)
+        return 0;
 
     /* BEGIN GUARD: provider store */
     CRYPTO_THREAD_write_lock(store->lock);
-    /* Check that this provider hasn't been loaded already */
-    if (find_provider_unlocked(ctx, module_name, init_function) != NULL)
-        goto err_locked;
-
-    /* If it hasn't, create a new store entry and store it early */
-    if ((stored_provider = stored_provider_new(module_name,
-                                               init_function)) == NULL)
-        goto err_locked;
     sk_STORED_PROVIDER_push(store->store, stored_provider);
     CRYPTO_THREAD_unlock(store->lock);
     /* END GUARD: provider store */
 
-    if (module_name != NULL) {
-        const char *load_dir = ossl_safe_getenv("OPENSSL_MODULES");
-        module = DSO_new();
+    return 1;
+}
 
-        if (module == NULL)
-            goto err;
+static STORED_PROVIDER *find_provider(OPENSSL_CTX *ctx, const char *name)
+{
+    int i;
+    struct provider_store_st *store = get_provider_store(ctx);
+    STORED_PROVIDER *val = NULL;
 
-        if (load_dir == NULL)
-            load_dir = MODULESDIR;
-
-        DSO_ctrl(module, DSO_CTRL_SET_FLAGS,
-                 DSO_FLAG_NAME_TRANSLATION_EXT_ONLY, NULL);
-        if ((platform_module_name =
-             DSO_convert_filename(module, module_name)) == NULL
-            || (module_path =
-                DSO_merge(module, platform_module_name, load_dir)) == NULL
-            || DSO_load(module, module_path, NULL,
-                        DSO_FLAG_NAME_TRANSLATION_EXT_ONLY) == NULL)
-            goto err;
-
-        init_function =
-            (ossl_provider_init_fn *)DSO_bind_func(module,
-                                                   "OSSL_provider_init");
-    }
-
-    if ((provider = ossl_provider_new(module, init_function)) == NULL)
-        goto err;
-
-    stored_provider->provider = provider;
-    return provider;
-
- err:
     /* BEGIN GUARD: provider store */
-    CRYPTO_THREAD_write_lock(store->lock);
- err_locked:
-    if (stored_provider != NULL) {
-        int i;
+    CRYPTO_THREAD_read_lock(store->lock);
+    for (i = 0; i < sk_STORED_PROVIDER_num(store->store); i++) {
+        val = sk_STORED_PROVIDER_value(store->store, i);
 
-        for (i = sk_STORED_PROVIDER_num(store->store); i-- > 0;)
-            if (sk_STORED_PROVIDER_value(store->store, i) == stored_provider) {
-                sk_STORED_PROVIDER_delete(store->store, i);
-                break;
-            }
+        if (strcmp(val->name, name) == 0)
+            break;
+
+        val = NULL;
     }
     CRYPTO_THREAD_unlock(store->lock);
     /* END GUARD: provider store */
 
-    DSO_free(module);
-    OPENSSL_free(platform_module_name);
-    OPENSSL_free(module_path);
-    ossl_provider_free(provider);
-    return NULL;
+    return val;
 }
 
-OSSL_PROVIDER *ossl_core_find_provider(OPENSSL_CTX *ctx,
-                                       const char *module_name,
-                                       ossl_provider_init_fn *init_function)
+OSSL_PROVIDER *ossl_core_find_provider(OPENSSL_CTX *ctx, const char *name)
 {
-    OSSL_PROVIDER *ret = NULL;
-    struct provider_store_st *store = get_provider_store(ctx);
+    STORED_PROVIDER *stored_provider = NULL;
 
-    if (!ossl_assert((module_name != NULL && init_function == NULL)
-                     || (module_name == NULL && init_function != NULL)))
+    if (!ossl_assert((name != NULL)))
         return NULL;
 
-    if (store != NULL) {
-        /* BEGIN GUARD: provider store */
-        CRYPTO_THREAD_read_lock(store->lock);
-        ret = find_provider_unlocked(ctx, module_name, init_function);
-        CRYPTO_THREAD_unlock(store->lock);
-        /* END GUARD: provider store */
-    }
+    if ((stored_provider = find_provider(ctx, name)) == NULL
+        || !stored_provider->provider_initialized)
+        return NULL;
 
-    return ret;
+    return stored_provider->provider;
 }
 
 int ossl_core_forall_provider(OPENSSL_CTX *ctx,
@@ -266,10 +236,45 @@ int ossl_core_forall_provider(OPENSSL_CTX *ctx,
     return ret;
 }
 
-/* Public API */
-const OSSL_PROVIDER *OSSL_load_provider(OPENSSL_CTX *ctx,
-                                        const char *module_name)
+int ossl_add_builtin_provider(OPENSSL_CTX *ctx, const char *name,
+                              ossl_provider_init_fn *init_function)
 {
-    return ossl_core_load_provider(ctx, module_name, NULL);
+    OSSL_PROVIDER *provider = NULL;
+    STORED_PROVIDER *stored_provider = NULL;
+
+    if ((provider = ossl_provider_new(NULL)) == NULL
+        || (stored_provider =
+            stored_provider_new(name, init_function, provider)) == NULL) {
+        ossl_provider_free(provider);
+        return 0;
+    }
+
+    return store_provider(ctx, stored_provider);
+}
+
+/* Public API */
+const OSSL_PROVIDER *OSSL_load_provider(OPENSSL_CTX *ctx, const char *name)
+{
+    STORED_PROVIDER *stored_provider = NULL;
+
+    if (!ossl_assert((name != NULL)))
+        return NULL;
+
+    stored_provider = find_provider(ctx, name);
+
+    if (stored_provider == NULL) {
+        if ((stored_provider = load_provider(ctx, name)) == NULL
+            || !store_provider(ctx, stored_provider)) {
+            stored_provider_free(stored_provider);
+            return NULL;
+        }
+    }
+    if (!stored_provider->provider_initialized) {
+        if (!ossl_provider_init(stored_provider->provider,
+                                stored_provider->init_function))
+            return NULL;
+        stored_provider->provider_initialized = 1;
+    }
+    return stored_provider->provider;
 }
 
