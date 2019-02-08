@@ -52,24 +52,14 @@ void *ossl_impl_construct(OPENSSL_CTX *ctx, int operation_id,
                           OSSL_IMPL_CONSTRUCT_METHOD *meth, void *meth_data);
 
 /*
- * Load a provider, either as a loadable module or built in.
- *
- * Either module_name or init_function must be set, anything else is an error.
- * module_name   - name of module to load if this is a loadable provider module.
- * init_function - init function for a built in provider.
- *
- * Every provider is stored internally, to avoid duplicate loads of the same
- * ones, and to be able to iterate on all loaded providers.
+ * Add a builtin provider.  Both name and init_function must be set.
  */
-OSSL_PROVIDER *ossl_core_load_provider(OPENSSL_CTX *,
-                                       const char *module_name,
-                                       ossl_provider_init_fn *init_function);
+int ossl_add_builtin_provider(OPENSSL_CTX *ctx, const char *name,
+                              ossl_provider_init_fn *init_function);
 /*
  * Find a loaded provider
  */
-OSSL_PROVIDER *ossl_core_find_provider(OPENSSL_CTX *,
-                                       const char *module_name,
-                                       ossl_provider_init_fn *init_function);
+OSSL_PROVIDER *ossl_core_find_provider(OPENSSL_CTX *ctx, const char *name);
 /*
  * Iterate over all loaded providers
  */
