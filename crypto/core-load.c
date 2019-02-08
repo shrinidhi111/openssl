@@ -232,11 +232,13 @@ OSSL_PROVIDER *ossl_core_find_provider(OPENSSL_CTX *ctx,
                      || (module_name == NULL && init_function != NULL)))
         return NULL;
 
-    /* BEGIN GUARD: provider store */
-    CRYPTO_THREAD_read_lock(store->lock);
-    ret = find_provider_unlocked(ctx, module_name, init_function);
-    CRYPTO_THREAD_unlock(store->lock);
-    /* END GUARD: provider store */
+    if (store != NULL) {
+        /* BEGIN GUARD: provider store */
+        CRYPTO_THREAD_read_lock(store->lock);
+        ret = find_provider_unlocked(ctx, module_name, init_function);
+        CRYPTO_THREAD_unlock(store->lock);
+        /* END GUARD: provider store */
+    }
 
     return ret;
 }
@@ -250,14 +252,16 @@ int ossl_core_forall_provider(OPENSSL_CTX *ctx,
     int i;
     struct provider_store_st *store = get_provider_store(ctx);
 
-    /* BEGIN GUARD: provider store */
-    CRYPTO_THREAD_read_lock(store->lock);
-    for (i = 0; i < sk_STORED_PROVIDER_num(store->store); i++)
-        if (!(ret = cb(sk_STORED_PROVIDER_value(store->store, i)->provider,
-                       cbdata)))
-            break;
-    CRYPTO_THREAD_unlock(store->lock);
-    /* END GUARD: provider store */
+    if (store != NULL) {
+        /* BEGIN GUARD: provider store */
+        CRYPTO_THREAD_read_lock(store->lock);
+        for (i = 0; i < sk_STORED_PROVIDER_num(store->store); i++)
+            if (!(ret = cb(sk_STORED_PROVIDER_value(store->store, i)->provider,
+                           cbdata)))
+                break;
+        CRYPTO_THREAD_unlock(store->lock);
+        /* END GUARD: provider store */
+    }
 
     return ret;
 }
