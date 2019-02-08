@@ -4634,3 +4634,5 @@ ERR_load_ESS_strings                    4589	3_0_0	EXIST::FUNCTION:
 OPENSSL_CTX_new                         4590	3_0_0	EXIST::FUNCTION:
 OPENSSL_CTX_free                        4591	3_0_0	EXIST::FUNCTION:
 OPENSSL_set_default_properties          4592	3_0_0	EXIST::FUNCTION:
+OPENSSL_LH_flush                        4593	3_0_0	EXIST::FUNCTION:
+OPENSSL_sk_reserve_at_least             4594	3_0_0	EXIST::FUNCTION:
