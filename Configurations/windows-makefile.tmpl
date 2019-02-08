@@ -45,8 +45,8 @@ SHLIB_VERSION_NUMBER={- $config{shlib_version} -}
 LIBS={- join(" ", map { ( platform->sharedlib_import($_), platform->staticlib($_) ) } @{$unified_info{libraries}}) -}
 SHLIBS={- join(" ", map { platform->sharedlib($_) // () } @{$unified_info{libraries}}) -}
 SHLIBPDBS={- join(" ", map { platform->sharedlibpdb($_) // () } @{$unified_info{libraries}}) -}
-ENGINES={- join(" ", map { platform->dso($_) } @{$unified_info{engines}}) -}
-ENGINEPDBS={- join(" ", map { platform->dsopdb($_) } @{$unified_info{engines}}) -}
+MODULES={- join(" ", map { platform->dso($_) } @{$unified_info{modules}}) -}
+MODULEPDBS={- join(" ", map { platform->dsopdb($_) } @{$unified_info{modules}}) -}
 PROGRAMS={- our @PROGRAMS = map { platform->bin($_) } @{$unified_info{programs}}; join(" ", @PROGRAMS) -}
 PROGRAMPDBS={- join(" ", map { $_.".pdb" } @{$unified_info{programs}}) -}
 SCRIPTS={- join(" ", @{$unified_info{scripts}}) -}
@@ -79,13 +79,15 @@ INSTALL_SHLIBPDBS={-
 -}
 INSTALL_ENGINES={-
         join(" ", map { quotify1(platform->dso($_)) }
-                  grep { !$unified_info{attributes}->{$_}->{noinst} }
-                  @{$unified_info{engines}})
+                  grep { !$unified_info{attributes}->{$_}->{noinst}
+                         && $unified_info{attributes}->{$_}->{engine} }
+                  @{$unified_info{modules}})
 -}
 INSTALL_ENGINEPDBS={-
         join(" ", map { quotify1(platform->dsopdb($_)) }
-                  grep { !$unified_info{attributes}->{$_}->{noinst} }
-                  @{$unified_info{engines}})
+                  grep { !$unified_info{attributes}->{$_}->{noinst}
+                         && $unified_info{attributes}->{$_}->{engine} }
+                  @{$unified_info{modules}})
 -}
 INSTALL_PROGRAMS={-
         join(" ", map { quotify1(platform->bin($_)) }
@@ -146,20 +148,33 @@ OPENSSLDIR_dev={- #
 OPENSSLDIR_dir={- canonpath($openssldir_dir) -}
 LIBDIR={- our $libdir = $config{libdir} || "lib";
           file_name_is_absolute($libdir) ? "" : $libdir -}
-ENGINESDIR_dev={- use File::Spec::Functions qw(:DEFAULT splitpath);
-                  our $enginesdir = catdir($prefix,$libdir,"engines-$sover_dirname");
-                  our ($enginesdir_dev, $enginesdir_dir, $enginesdir_file) =
-                      splitpath($enginesdir, 1);
-                  $enginesdir_dev -}
+MODULESDIR_dev={- use File::Spec::Functions qw(:DEFAULT splitpath);
+                  our $modulesprefix = catdir($prefix,$libdir);
+                  our ($modulesprefix_dev, $modulesprefix_dir,
+                       $modulesprefix_file) =
+                      splitpath($modulesprefix, 1);
+                  our $modulesdir_dev = $modulesprefix_dev;
+                  our $modulesdir_dir =
+                      catdir($modulesprefix_dir, "ossl-modules");
+                  our $modulesdir = catpath($modulesdir_dev, $modulesdir_dir);
+                  our $enginesdir_dev = $modulesprefix_dev;
+                  out $enginesdir_dir =
+                      catdir($modulesprefix_dir, "engines-$sover_dirname");
+                  our $enginesdir = catpath($enginesdir_dev, $enginesdir_dir);
+                  $modulesdir_dev -}
+MODULESDIR_dir={- canonpath($modulesdir_dir) -}
+ENGINESDIR_dev={- $enginesdir_dev -}
 ENGINESDIR_dir={- canonpath($enginesdir_dir) -}
 !IF "$(DESTDIR)" != ""
 INSTALLTOP=$(DESTDIR)$(INSTALLTOP_dir)
 OPENSSLDIR=$(DESTDIR)$(OPENSSLDIR_dir)
 ENGINESDIR=$(DESTDIR)$(ENGINESDIR_dir)
+MODULESDIR=$(DESTDIR)$(MODULESDIR_dir)
 !ELSE
 INSTALLTOP=$(INSTALLTOP_dev)$(INSTALLTOP_dir)
 OPENSSLDIR=$(OPENSSLDIR_dev)$(OPENSSLDIR_dir)
 ENGINESDIR=$(ENGINESDIR_dev)$(ENGINESDIR_dir)
+MODULESDIR=$(MODULESDIR_dev)$(MODULESDIR_dir)
 !ENDIF
 
 # $(libdir) is chosen to be compatible with the GNU coding standards
@@ -253,7 +268,8 @@ LIB_CPPFLAGS={- our $lib_cppflags =
                 join(' ', $lib_cppflags,
                           (map { '-D'.quotify1($_) }
                                "OPENSSLDIR=\"$openssldir\"",
-                               "ENGINESDIR=\"$enginesdir\""),
+                               "ENGINESDIR=\"$enginesdir\"",
+                               "MODULESDIR=\"$modulesdir\""),
                           '$(CNF_CPPFLAGS)', '$(CPPFLAGS)') -}
 LIB_CFLAGS={- join(' ', $target{lib_cflags} || (),
                         $target{shared_cflag} || (),
@@ -311,14 +327,14 @@ PROCESSOR= {- $config{processor} -}
 
 # The main targets ###################################################
 
-{- dependmagic('all'); -}: build_libs_nodep build_engines_nodep build_programs_nodep
+{- dependmagic('all'); -}: build_libs_nodep build_modules_nodep build_programs_nodep
 {- dependmagic('build_libs'); -}: build_libs_nodep
-{- dependmagic('build_engines'); -}: build_engines_nodep
+{- dependmagic('build_modules'); -}: build_modules_nodep
 {- dependmagic('build_programs'); -}: build_programs_nodep
 
 build_generated: $(GENERATED_MANDATORY)
 build_libs_nodep: $(LIBS) {- join(" ",map { platform->sharedlib_import($_) // () } @{$unified_info{libraries}}) -}
-build_engines_nodep: $(ENGINES)
+build_modules_nodep: $(MODULES)
 build_programs_nodep: $(PROGRAMS) $(SCRIPTS)
 
 # Kept around for backward compatibility
@@ -334,7 +350,7 @@ build_all_generated: $(GENERATED_MANDATORY) $(GENERATED)
 	@{- output_on() if $disabled{makedepend}; "" -}
 
 test: tests
-{- dependmagic('tests'); -}: build_programs_nodep build_engines_nodep
+{- dependmagic('tests'); -}: build_programs_nodep build_modules_nodep
 	@{- output_off() if $disabled{tests}; "" -}
 	-mkdir $(BLDDIR)\test\test-runs
 	set SRCTOP=$(SRCDIR)
@@ -366,7 +382,7 @@ libclean:
 
 clean: libclean
 	{- join("\n\t", map { "-del /Q /F $_" } @PROGRAMS) -}
-	-del /Q /F $(ENGINES)
+	-del /Q /F $(MODULES)
 	-del /Q /F $(SCRIPTS)
 	-del /Q /F $(GENERATED_MANDATORY)
 	-del /Q /F $(GENERATED)
@@ -432,13 +448,13 @@ install_dev: install_runtime_libs
 
 uninstall_dev:
 
-install_engines: install_runtime_libs build_engines
+install_engines: install_runtime_libs build_modules
 	@if "$(INSTALLTOP)"=="" ( $(ECHO) "INSTALLTOP should not be empty" & exit 1 )
-	@$(ECHO) "*** Installing engines"
+	@$(ECHO) "*** Installing ENGINE modules"
 	@"$(PERL)" "$(SRCDIR)\util\mkdir-p.pl" "$(ENGINESDIR)"
-	@if not "$(ENGINES)"=="" \
+	@if not "$(INSTALL_ENGINES)"=="" \
 	 "$(PERL)" "$(SRCDIR)\util\copy.pl" $(INSTALL_ENGINES) "$(ENGINESDIR)"
-	@if not "$(ENGINES)"=="" \
+	@if not "$(INSTALL_ENGINES)"=="" \
 	 "$(PERL)" "$(SRCDIR)\util\copy.pl" $(INSTALL_ENGINEPDBS) "$(ENGINESDIR)"
 
 uninstall_engines:

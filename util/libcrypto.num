@@ -4636,3 +4636,5 @@ OPENSSL_CTX_free                        4591	3_0_0	EXIST::FUNCTION:
 OPENSSL_set_default_properties          4592	3_0_0	EXIST::FUNCTION:
 OPENSSL_LH_flush                        4593	3_0_0	EXIST::FUNCTION:
 OPENSSL_sk_reserve_at_least             4594	3_0_0	EXIST::FUNCTION:
+OSSL_load_provider                      4595	3_0_0	EXIST::FUNCTION:
+OSSL_unload_provider                    4596	3_0_0	EXIST::FUNCTION:
