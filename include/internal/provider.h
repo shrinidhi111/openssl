@@ -21,8 +21,9 @@
  */
 
 /* Provider Object constructor, destructor and getters */
-OSSL_PROVIDER *ossl_provider_new(DSO *dso,
-                                 ossl_provider_init_fn *init_function);
+OSSL_PROVIDER *ossl_provider_new(DSO *dso);
+int ossl_provider_init(OSSL_PROVIDER *prov,
+                       ossl_provider_init_fn *init_function);
 int ossl_provider_upref(OSSL_PROVIDER *prov);
 void ossl_provider_free(OSSL_PROVIDER *prov);
 

@@ -31,35 +31,42 @@ DEFINE_RUN_ONCE(do_provider_init)
 # define provider_lock NULL
 #endif
 
-OSSL_PROVIDER *ossl_provider_new(DSO *dso, ossl_provider_init_fn *init_function)
+OSSL_PROVIDER *ossl_provider_new(DSO *dso)
 {
     OSSL_PROVIDER *prov = OPENSSL_zalloc(sizeof(*prov));
-    const OSSL_DISPATCH *provider_dispatch = NULL;
-
-    if (!ossl_assert(init_function != NULL))
-        return NULL;
-
-    if (!init_function(prov, core_dispatch, &provider_dispatch))
-        return NULL;
 
     if (prov != NULL) {
         prov->module = dso;
-        for (; provider_dispatch->function_id != 0; provider_dispatch++) {
-            switch (provider_dispatch->function_id) {
-            case OSSL_FUNC_PROVIDER_QUERY_OPERATION:
-                prov->query_operation =
-                    OSSL_get_provider_query_operation(provider_dispatch);
-                break;
-            case OSSL_FUNC_PROVIDER_TEARDOWN:
-                prov->teardown =
-                    OSSL_get_provider_teardown(provider_dispatch);
-                break;
-            }
+        ossl_provider_upref(prov);
+    }
+    return prov;
+}
+
+int ossl_provider_init(OSSL_PROVIDER *prov,
+                       ossl_provider_init_fn *init_function)
+{
+    const OSSL_DISPATCH *provider_dispatch = NULL;
+
+    if (!ossl_assert(init_function != NULL)
+        || !ossl_assert(prov != NULL))
+        return 0;
+
+    if (!init_function(prov, core_dispatch, &provider_dispatch))
+        return 0;
+
+    for (; provider_dispatch->function_id != 0; provider_dispatch++) {
+        switch (provider_dispatch->function_id) {
+        case OSSL_FUNC_PROVIDER_QUERY_OPERATION:
+            prov->query_operation =
+                OSSL_get_provider_query_operation(provider_dispatch);
+            break;
+        case OSSL_FUNC_PROVIDER_TEARDOWN:
+            prov->teardown =
+                OSSL_get_provider_teardown(provider_dispatch);
+            break;
         }
     }
-
-    ossl_provider_upref(prov);
-    return prov;
+    return 1;
 }
 
 int ossl_provider_upref(OSSL_PROVIDER *prov)
