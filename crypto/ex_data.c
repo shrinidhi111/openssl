@@ -373,9 +373,6 @@ int CRYPTO_alloc_ex_data(int class_index, void *obj, CRYPTO_EX_DATA *ad,
     EX_CALLBACKS *ip;
     void *curval;
 
-    if (ad->sk == NULL)
-        return 0;
-
     curval = CRYPTO_get_ex_data(ad, idx);
 
     /* Already there, no need to allocate */
@@ -386,6 +383,10 @@ int CRYPTO_alloc_ex_data(int class_index, void *obj, CRYPTO_EX_DATA *ad,
     f = sk_EX_CALLBACK_value(ip->meth, idx);
     CRYPTO_THREAD_unlock(ex_data_lock);
 
+    /*
+     * This should end up calling CRYPTO_set_ex_data(), which allocates
+     * everything necessary to support placing the new data in the right spot.
+     */
     f->new_func(obj, curval, ad, idx, f->argl, f->argp);
 
     return 1;
