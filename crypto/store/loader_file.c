@@ -929,7 +929,8 @@ static int file_expect(OSSL_STORE_LOADER_CTX *ctx, int expected)
     return 1;
 }
 
-static int file_find(OSSL_STORE_LOADER_CTX *ctx, OSSL_STORE_SEARCH *search)
+static int file_find(OSSL_STORE_LOADER_CTX *ctx,
+                     const OSSL_STORE_SEARCH *search)
 {
     /*
      * If ctx == NULL, the library is looking to know if this loader supports
