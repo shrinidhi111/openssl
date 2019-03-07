@@ -38,8 +38,10 @@ B<openssl> B<cms>
 [B<-print>]
 [B<-CAfile file>]
 [B<-CApath dir>]
+[B<-CAstore uri>]
 [B<-no-CAfile>]
 [B<-no-CApath>]
+[B<-no-CAstore>]
 [B<-attime timestamp>]
 [B<-check_ss_sig>]
 [B<-crl_check>]
@@ -294,6 +296,16 @@ B<-verify>. This directory must be a standard certificate directory: that
 is a hash of each subject name (using B<x509 -hash>) should be linked
 to each certificate.
 
+=item B<-CAstore uri>
+
+A URI to a store containing trusted CA certificates, only used with
+B<-verify>.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
+
 =item B<-no-CAfile>
 
 Do not load the trusted CA certificates from the default file location
@@ -301,6 +313,10 @@ Do not load the trusted CA certificates from the default file location
 =item B<-no-CApath>
 
 Do not load the trusted CA certificates from the default directory location
+
+=item B<-no-CAstore>
+
+Do not load the trusted CA certificates from the default store
 
 =item B<-md digest>
 

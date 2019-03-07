@@ -36,10 +36,13 @@ B<openssl> B<s_client>
 [B<-pass arg>]
 [B<-CApath directory>]
 [B<-CAfile filename>]
+[B<-CAstore uri>]
 [B<-chainCApath directory>]
 [B<-chainCAfile filename>]
+[B<-chainCAstore uri>]
 [B<-no-CAfile>]
 [B<-no-CApath>]
+[B<-no-CAstore>]
 [B<-requestCAfile filename>]
 [B<-dane_tlsa_domain domain>]
 [B<-dane_tlsa_rrdata rrdata>]
@@ -308,6 +311,15 @@ also used when building the client certificate chain.
 A file containing trusted certificates to use during server authentication
 and to use when attempting to build the client certificate chain.
 
+=item B<-CAstore uri>
+
+A URI to a store to use for server certificate verification.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
+
 =item B<-chainCApath directory>
 
 The directory to use for building the chain provided to the server. This
@@ -318,6 +330,10 @@ directory must be in "hash format", see L<verify(1)> for more information.
 A file containing trusted certificates to use when attempting to build the
 client certificate chain.
 
+=item B<-chainCAstore uri>
+
+The URI to use when attempting to build the client certificate chain.
+
 =item B<-no-CAfile>
 
 Do not load the trusted CA certificates from the default file location
@@ -325,6 +341,10 @@ Do not load the trusted CA certificates from the default file location
 =item B<-no-CApath>
 
 Do not load the trusted CA certificates from the default directory location
+
+=item B<-no-CApath>
+
+Do not load the trusted CA certificates from the default store
 
 =item B<-requestCAfile file>
 

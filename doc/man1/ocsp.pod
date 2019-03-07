@@ -33,8 +33,10 @@ B<openssl> B<ocsp>
 [B<-path>]
 [B<-CApath dir>]
 [B<-CAfile file>]
+[B<-CAstore uri>]
 [B<-no-CAfile>]
 [B<-no-CApath>]
+[B<-no-CAstore>]
 [B<-attime timestamp>]
 [B<-check_ss_sig>]
 [B<-crl_check>]
@@ -205,10 +207,11 @@ each child is willing to wait for the client's OCSP response.
 This option is available on POSIX systems (that support the fork() and other
 required unix system-calls).
 
-=item B<-CAfile file>, B<-CApath pathname>
+=item B<-CAfile file>, B<-CApath pathname>, B<-CAstore uri>
 
-File or pathname containing trusted CA certificates. These are used to verify
-the signature on the OCSP response.
+File, pathname or URI to store containing trusted CA
+certificates.
+These are used to verify the signature on the OCSP response.
 
 =item B<-no-CAfile>
 
@@ -217,6 +220,10 @@ Do not load the trusted CA certificates from the default file location
 =item B<-no-CApath>
 
 Do not load the trusted CA certificates from the default directory location
+
+=item B<-no-CAstore>
+
+Do not load the trusted CA certificates from the default store
 
 =item B<-attime>, B<-check_ss_sig>, B<-crl_check>, B<-crl_check_all>,
 B<-explicit_policy>, B<-extended_crl>, B<-ignore_critical>, B<-inhibit_any>,
@@ -395,9 +402,9 @@ the OCSP request checked using the responder certificate's public key.
 
 Then a normal certificate verify is performed on the OCSP responder certificate
 building up a certificate chain in the process. The locations of the trusted
-certificates used to build the chain can be specified by the B<CAfile>
-and B<CApath> options or they will be looked for in the standard OpenSSL
-certificates directory.
+certificates used to build the chain can be specified by the B<-CAfile>,
+B<-CApath> or B<-CAstore> options or they will be looked for in the
+standard OpenSSL certificates directory.
 
 If the initial verify fails then the OCSP verify process halts with an
 error.
@@ -432,8 +439,8 @@ with the B<-VAfile> option.
 =head1 NOTES
 
 As noted, most of the verify options are for testing or debugging purposes.
-Normally only the B<-CApath>, B<-CAfile> and (if the responder is a 'global
-VA') B<-VAfile> options need to be used.
+Normally only the B<-CApath>, B<-CAfile>, B<-CAstore> and (if the responder
+is a 'global VA') B<-VAfile> options need to be used.
 
 The OCSP server is only useful for test and demonstration purposes: it is
 not really usable as a full OCSP responder. It contains only a very

@@ -39,8 +39,10 @@ B<openssl> B<s_server>
 [B<-state>]
 [B<-CAfile infile>]
 [B<-CApath dir>]
+[B<-CAstore uri>]
 [B<-no-CAfile>]
 [B<-no-CApath>]
+[B<-no-CAstore>]
 [B<-nocert>]
 [B<-quiet>]
 [B<-no_resume_ephemeral>]
@@ -63,6 +65,8 @@ B<openssl> B<s_server>
 [B<-dcert_chain infile>]
 [B<-chainCApath dir>]
 [B<-verifyCApath dir>]
+[B<-chainCAstore uri>]
+[B<-verifyCAstore uri>]
 [B<-no_cache>]
 [B<-ext_cache>]
 [B<-CRLform PEM|DER>]
@@ -374,6 +378,16 @@ The directory to use for client certificate verification. This directory
 must be in "hash format", see L<verify(1)> for more information. These are
 also used when building the server certificate chain.
 
+=item B<-CAstore uri>
+
+A URI to a store to use for client certificate verification.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
+These certificates are also used when building the server certificate chain.
+
 =item B<-chainCApath dir>
 
 The directory to use for building the chain provided to the client. This
@@ -384,6 +398,15 @@ directory must be in "hash format", see L<verify(1)> for more information.
 A file containing trusted certificates to use when attempting to build the
 server certificate chain.
 
+=item B<-chainCAstore uri>
+
+The URI to a store to use for building the chain provided to the client.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-chainCAfile> or
+B<-chainCApath>, depending on if the URI indicates a directory or a
+single file.
+
 =item B<-no-CAfile>
 
 Do not load the trusted CA certificates from the default file location.
@@ -391,6 +414,10 @@ Do not load the trusted CA certificates from the default file location.
 =item B<-no-CApath>
 
 Do not load the trusted CA certificates from the default directory location.
+
+=item B<-no-CAstore>
+
+Do not load the trusted CA certificates from the default store.
 
 =item B<-nocert>
 

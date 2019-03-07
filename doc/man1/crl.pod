@@ -22,6 +22,7 @@ B<openssl> B<crl>
 [B<-nextupdate>]
 [B<-CAfile file>]
 [B<-CApath dir>]
+[B<-CAstore uri>]
 
 =head1 DESCRIPTION
 
@@ -102,6 +103,16 @@ Verify the signature on a CRL by looking up the issuing certificate in
 B<dir>. This directory must be a standard certificate directory: that
 is a hash of each subject name (using B<x509 -hash>) should be linked
 to each certificate.
+
+=item B<-CAstore uri>
+
+A URI to a store containing trusted CA certificates, only used with
+B<-verify>.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
 
 =back
 

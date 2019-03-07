@@ -11,8 +11,10 @@ B<openssl> B<verify>
 [B<-help>]
 [B<-CAfile file>]
 [B<-CApath directory>]
+[B<-CAstore uri>]
 [B<-no-CAfile>]
 [B<-no-CApath>]
+[B<-no-CAstore>]
 [B<-allow_proxy_certs>]
 [B<-attime timestamp>]
 [B<-check_ss_sig>]
@@ -78,6 +80,15 @@ form ("hash" is the hashed certificate subject name: see the B<-hash> option
 of the B<x509> utility). Under Unix the B<c_rehash> script will automatically
 create symbolic links to a directory of certificates.
 
+=item B<-CAstore uri>
+
+A URI to a store of trusted CA certificates.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
+
 =item B<-no-CAfile>
 
 Do not load the trusted CA certificates from the default file location.
@@ -85,6 +96,10 @@ Do not load the trusted CA certificates from the default file location.
 =item B<-no-CApath>
 
 Do not load the trusted CA certificates from the default directory location.
+
+=item B<-no-CAstore>
+
+Do not load the trusted CA certificates from the default store.
 
 =item B<-allow_proxy_certs>
 
@@ -205,8 +220,8 @@ P-256 and P-384.
 =item B<-trusted_first>
 
 When constructing the certificate chain, use the trusted certificates specified
-via B<-CAfile>, B<-CApath> or B<-trusted> before any certificates specified via
-B<-untrusted>.
+via B<-CAfile>, B<-CApath>, B<-CAstore> or B<-trusted> before any certificates
+specified via B<-untrusted>.
 This can be useful in environments with Bridge or Cross-Certified CAs.
 As of OpenSSL 1.1.0 this option is on by default and cannot be disabled.
 
@@ -237,9 +252,9 @@ consulted.
 That is, the only trust-anchors are those listed in B<file>.
 This option can be specified more than once to include trusted certificates
 from multiple B<files>.
-This option implies the B<-no-CAfile> and B<-no-CApath> options.
-This option cannot be used in combination with either of the B<-CAfile> or
-B<-CApath> options.
+This option implies the B<-no-CAfile>, B<-no-CApath> and B<-no-CAstore> options.
+This option cannot be used in combination with any of the B<-CAfile>,
+B<-CApath> or B<-CAstore> options.
 
 =item B<-use_deltas>
 
@@ -746,8 +761,9 @@ Although the issuer checks are a considerable improvement over the old
 technique they still suffer from limitations in the underlying X509_LOOKUP
 API. One consequence of this is that trusted certificates with matching
 subject name must either appear in a file (as specified by the B<-CAfile>
-option) or a directory (as specified by B<-CApath>). If they occur in
-both then only the certificates in the file will be recognised.
+option), a directory (as specified by B<-CApath>), or a store (as specified
+by B<-CAstore>). If they occur in more than one location then only the
+certificates in the file will be recognised.
 
 Previous versions of OpenSSL assume certificates with matching subject
 name are identical and mishandled them.

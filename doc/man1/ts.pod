@@ -49,6 +49,7 @@ B<-verify>
 [B<-token_in>]
 [B<-CApath> trusted_cert_path]
 [B<-CAfile> trusted_certs.pem]
+[B<-CAstore> trusted_certs_uri]
 [B<-untrusted> cert_file.pem]
 [I<verify options>]
 
@@ -362,16 +363,27 @@ of a time stamp response (TimeStampResp). (Optional)
 
 The name of the directory containing the trusted CA certificates of the
 client. See the similar option of L<verify(1)> for additional
-details. Either this option or B<-CAfile> must be specified. (Optional)
+details. (Optional)
 
 
 =item B<-CAfile> trusted_certs.pem
 
 The name of the file containing a set of trusted self-signed CA
 certificates in PEM format. See the similar option of
-L<verify(1)> for additional details. Either this option
-or B<-CApath> must be specified.
+L<verify(1)> for additional details.
 (Optional)
+
+=item B<-CAstore uri>
+
+A URI to a store containing the trusted CA certificates for the client.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
+(Optional)
+
+=item At least one of B<-CApath>, B<-CAfile> or B<-CAstore> must be specified.
 
 =item B<-untrusted> cert_file.pem
 

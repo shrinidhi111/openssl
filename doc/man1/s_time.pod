@@ -14,9 +14,11 @@ B<openssl> B<s_time>
 [B<-cert filename>]
 [B<-key filename>]
 [B<-CApath directory>]
-[B<-cafile filename>]
+[B<-CAfile filename>]
+[B<-CAstore uri>]
 [B<-no-CAfile>]
 [B<-no-CApath>]
+[B<-no-CAstore>]
 [B<-reuse>]
 [B<-new>]
 [B<-verify depth>]
@@ -90,6 +92,16 @@ also used when building the client certificate chain.
 A file containing trusted certificates to use during server authentication
 and to use when attempting to build the client certificate chain.
 
+=item B<-CAstore uri>
+
+A URI to a store containing trusted CA certificates to use for server certificate verification.
+The URI may indicate a single certificate, as well as a collection of
+them.
+With URIs in the C<file:> scheme, this acts as B<-CAfile> or
+B<-CApath>, depending on if the URI indicates a directory or a single
+file.
+The certificates are also used when building the client certificate chain.
+
 =item B<-no-CAfile>
 
 Do not load the trusted CA certificates from the default file location
@@ -97,6 +109,10 @@ Do not load the trusted CA certificates from the default file location
 =item B<-no-CApath>
 
 Do not load the trusted CA certificates from the default directory location
+
+=item B<-no-CAstore>
+
+Do not load the trusted CA certificates from the default store
 
 =item B<-new>
 
