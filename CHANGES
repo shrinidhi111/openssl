@@ -9,6 +9,10 @@
 
  Changes between 1.1.1 and 3.0.0 [xx XXX xxxx]
 
+  *) Added the X509_LOOKUP_METHOD X509_LOOKUP_store, to allow access to
+     certificate and CRL stores via URIs and OSSL_STORE loaders.
+     [Richard Levitte]
+
   *) Added support for enabling instrumentation through trace output.
      This is left to application control, by allowing it to register BIOs as
      channels for a number of tracing and debugging categories.
