@@ -26,6 +26,35 @@
             ( grep { defined $unified_info{sources}->{$_} }
               @{$unified_info{scripts}} ) );
 
+ our @libs = @{$unified_info{libraries}};
+ our @install_libs = grep { !$unified_info{attributes}->{$_}->{noinst} } @libs;
+ our @shlibs = grep { platform->sharedname($_) } @libs;
+ our @install_shlibs =
+     grep { !$unified_info{attributes}->{$_}->{noinst} } @shlibs;
+ our @modules = @{$unified_info{modules}};
+ our @install_modules =
+     grep { !$unified_info{attributes}->{$_}->{noinst}
+            && !$unified_info{attributes}->{$_}->{engine} }
+     @modules;
+ our @engines = @{$unified_info{modules}};
+ our @install_engines =
+     grep { !$unified_info{attributes}->{$_}->{noinst}
+            && $unified_info{attributes}->{$_}->{engine} }
+     @engines;
+ our @programs = @{$unified_info{programs}};
+ our @install_programs =
+     grep { !$unified_info{attributes}->{$_}->{noinst} }
+     @programs;
+ our @scripts = @{$unified_info{scripts}};
+ our @install_bin_scripts =
+     grep { !$unified_info{attributes}->{$_}->{noinst}
+            && !$unified_info{attributes}->{$_}->{misc} }
+     @scripts;
+ our @install_misc_scripts =
+     grep { !$unified_info{attributes}->{$_}->{noinst}
+            && $unified_info{attributes}->{$_}->{misc} }
+     @scripts;
+
  # Avoid strange output
  "";
 -}
