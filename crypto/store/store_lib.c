@@ -437,8 +437,13 @@ X509_CRL *OSSL_STORE_INFO_get1_CRL(const OSSL_STORE_INFO *info)
 }
 
 /*
- * Free the OSSL_STORE_INFO
+ * Clear and free the OSSL_STORE_INFO
  */
+void OSSL_STORE_INFO_clear(OSSL_STORE_INFO *info)
+{
+    memset(&info->_, 0, sizeof(info->_));
+}
+
 void OSSL_STORE_INFO_free(OSSL_STORE_INFO *info)
 {
     if (info != NULL) {
