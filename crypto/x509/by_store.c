@@ -42,18 +42,40 @@ static int get_first_found(X509_LOOKUP *lctx, const char *uri,
                 ok = get_first_found(lctx, OSSL_STORE_INFO_get0_NAME(info),
                                      type, criterion, depth - 1, obj);
         } else {
+            /*
+             * We're butchering the reference count below, for a reason:
+             * The way functions like X509_STORE_CTX_get_by_subject()
+             * are written, it seems like the X509_LOOKUP_METHODs are
+             * expected to cache their results, and that those will be
+             * cleaned up by the lookup method function 'free'.
+             * This lookup method does NOT cache any object on its
+             * own, and therefore need to make sure the reference
+             * count reflects that.  The caller will have to increase
+             * it (and we know that X509_STORE_CTX_get_by_subject()
+             * does).
+             */
             switch (infotype) {
             case OSSL_STORE_INFO_CERT:
                 if (type == X509_LU_X509 || type == X509_LU_NONE) {
+                    int i;
+
                     obj->type = X509_LU_X509;
-                    obj->data.x509 = OSSL_STORE_INFO_get1_CERT(info);
+                    obj->data.x509 = OSSL_STORE_INFO_get0_CERT(info);
+                    CRYPTO_DOWN_REF(&obj->data.x509->references, &i,
+                                    obj->data.x509->lock);
+                    OSSL_STORE_INFO_clear(info);
                     ok = 1;
                 }
                 break;
             case OSSL_STORE_INFO_CRL:
                 if (type == X509_LU_CRL || type == X509_LU_NONE) {
+                    int i;
+
                     obj->type = X509_LU_CRL;
-                    obj->data.crl = OSSL_STORE_INFO_get1_CRL(info);
+                    obj->data.crl = OSSL_STORE_INFO_get0_CRL(info);
+                    CRYPTO_DOWN_REF(&obj->data.crl->references, &i,
+                                    obj->data.crl->lock);
+                    OSSL_STORE_INFO_clear(info);
                     ok = 1;
                 }
                 break;
