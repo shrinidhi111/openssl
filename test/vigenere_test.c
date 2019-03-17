@@ -8,11 +8,12 @@
 #include <openssl/provider.h>
 #include "testutil.h"
 
-const unsigned char plaintext[] = "Ceasar's trove of junk";
-const unsigned char key[] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                              'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B' };
-unsigned char ciphertext[sizeof(plaintext)];
-unsigned char plaintext2[sizeof(plaintext)];
+static const unsigned char plaintext[] = "Ceasar's trove of junk";
+static const unsigned char key[] =
+  { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    'Z', 'W', 'T', 'Q', 'N', 'K', 'H', 'B' };
+static unsigned char ciphertext[sizeof(plaintext)];
+static unsigned char plaintext2[sizeof(plaintext)];
 
 static int test_vigenere(OPENSSL_CTX *libctx)
 {
