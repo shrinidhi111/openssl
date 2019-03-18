@@ -26,6 +26,12 @@
             ( grep { defined $unified_info{sources}->{$_} }
               @{$unified_info{scripts}} ) );
 
+ our @deps = $disabled{makedepend}
+     ? ()
+     : ( map { platform->isobj($_) ? platform->dep($_) : () }
+         grep { $unified_info{sources}->{$_}->[0] =~ /\.c$/ }
+         keys %{$unified_info{sources}} );
+
  our @libs = @{$unified_info{libraries}};
  our @install_libs = grep { !$unified_info{attributes}->{$_}->{noinst} } @libs;
  our @shlibs = grep { platform->sharedname($_) } @libs;
