@@ -90,8 +90,7 @@ SHLIB_VERSION_NUMBER={- $config{shlib_version} -}
 SHLIB_TARGET={- $target{shared_target} -}
 
 LIBS={- join(", ", map { "-\n\t".$_ }
-                   map { ( platform->sharedlib_import($_),
-                           platform->staticlib($_) ) }
+                   map { ( platform->staticlib($_) ) }
                    @libs) -}
 SHLIBS={- join(", ", map { "-\n\t".$_ }
                      map { platform->sharedlib($_) // () }
