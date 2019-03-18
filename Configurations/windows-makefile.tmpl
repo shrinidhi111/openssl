@@ -56,6 +56,9 @@ GENERATED_MANDATORY={- join(" ", @{$unified_info{depends}->{""}} ) -}
 GENERATED={- # common0.tmpl provides @generated
              join(" ", map { platform->convertext($_) } @generated) -}
 
+APPS_OPENSSL={- use File::Spec::Functions;
+                "\"".catfile("apps","openssl")."\"" -}
+
 # Do not edit these manually. Use Configure with --prefix or --openssldir
 # to change this!  Short explanation in the top comment in Configure
 INSTALLTOP_dev={- # $prefix is used in the OPENSSLDIR perl snippet
