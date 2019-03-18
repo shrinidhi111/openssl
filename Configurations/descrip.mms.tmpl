@@ -109,6 +109,9 @@ GENERATED_MANDATORY={- join(", ", map { "-\n\t".$_ } @{$unified_info{depends}->{
 GENERATED={- # common0.tmpl provides @generated
              join(", ", map { platform->convertext($_) } @generated) -}
 
+APPS_OPENSSL={- use File::Spec::Functions;
+                catfile("apps","openssl") -}
+
 # DESTDIR is for package builders so that they can configure for, say,
 # SYS$COMMON:[OPENSSL] and yet have everything installed in STAGING:[USER].
 # In that case, configure with --prefix=SYS$COMMON:[OPENSSL] and then run
