@@ -481,7 +481,7 @@ uninstall_dev: uninstall_runtime_libs
 	{- join("\n\t", platform->uninstall_dir(type => 'pkgconfig', silent => 1)); -}
 	{- join("\n\t", platform->uninstall_dir(type => 'lib', silent => 1)); -}
 
-install_engines: install_runtime_libs build_engines
+install_engines: install_runtime_libs build_modules
 	@ : {- output_off() unless scalar @install_engines; "" -}
 	@[ -n "$(INSTALLTOP)" ] || (echo INSTALLTOP should not be empty; exit 1)
 	{- join("\n\t", platform->install_dir(type => 'engine', silent => 1)); -}
